@@ -10,11 +10,46 @@ import torchvision
 import torchvision.transforms as transforms
 from dataclasses import dataclass
 from torch.utils.data import Dataset
+from torchvision import datasets
+
+NORMALIZE = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
+TRANSFORM_TRAIN = transforms.Compose(
+    [
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        NORMALIZE,
+    ]
+)
+
+TRANSFORM_VAL = transforms.Compose(
+    [
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        NORMALIZE,
+    ]
+)
 
 
-@dataclass
-class Sample:
-    image: Image
+def _get_base_imagenet_train(root_train):
+    return datasets.ImageFolder(root=root_train, transform=None)
+
+
+def _get_base_imagenet_val(root_val):
+    return datasets.ImageFolder(root=root_val, transform=None)
+
+
+# RUN_MATRIX = {
+#     True: (_get_base_imagenet_train, TRANSFORM_TRAIN),
+#     False: (_get_base_imagenet_, TRANSFORM_TRAIN),
+# }
+
+
+@dataclass(frozen=True)
+class SampleMeta:
+    path: str
     label: int
     altered: bool
     org_label: Optional[int] = None
@@ -24,32 +59,18 @@ class Sample:
 TriggerMode = Literal["append", "replace"]
 LabelMode = Literal["label_flip", "clean_label"]
 
-TRANSFORM = transforms.Compose(
-    [
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ]
-)
-
-def get_image_net(root, transform):
-    pass
 
 class BackdooredDataset(Dataset):
     def __init__(
         self,
         root: str = "./data",
-        dataset: str = "image_net",
         train: bool = True,
-        download: bool = True,
         backdoor: bool = True,
-        trigger_fn: Callable[[Image], Image] = None,
+        trigger_fn: Optional[Callable[[Image.Image], Image.Image]] = None,
         mode: TriggerMode = "append",
         label_mode: LabelMode = "label_flip",
         label_flip_target: int = 0,
         p=0.15,
-        transform: transforms = None,
     ):
         self.p = p
         self.transform = transform

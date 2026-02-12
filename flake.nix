@@ -18,7 +18,8 @@
 
                     (pkgs.python312.withPackages (ps: with ps; [
                       gdown
-                      pytorch
+                      torch
+                      ruff
                       wandb
                     ]))
                 ];

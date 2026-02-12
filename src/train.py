@@ -8,42 +8,53 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train(
-    model, config, train_data_loader, test_data_loader, scheduler=None, optimizer=None
+    model,
+    config,
+    train_data_loader,
+    val_data_loader,
+    scheduler=None,
+    optimizer=None,
+    scaler=None,
 ):
     criterion = nn.CrossEntropyLoss().cuda()
 
+    # FIXME: move
     if optimizer is None:
         optimizer = torch.optim.SGD(
             model.parameters(),
-            lr=config.INITIAL_LEARNING_RATE,
-            momentum=config.MOMENTUM,
-            weight_decay=config.WEIGHT_DECAY,
+            lr=config.INITIAL_LEARNING_RATE,  # FIXME: parameter
+            momentum=config.MOMENTUM,  # FIXME: parameter
+            weight_decay=config.WEIGHT_DECAY,  # FIXME: parameter
         )
 
     if scheduler is None:
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=[80, 125], gamma=0.1
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=30,
+            gamma=0.1,  # FIXME: parameter
         )
 
     best_accuracy = 0.0
 
-    for epoch in range(config.EPOCH_NUMBER):
+    for epoch in range(config.EPOCH_NUMBER):  # FIXME: parameter
         train_loss, train_acc, train_error_rate = train_one_epoch(
-            model, train_data_loader, criterion, optimizer
+            model, train_data_loader, criterion, optimizer, scaler
         )
-        test_loss, test_acc, test_error_rate = evaluate(model, test_data_loader, criterion)
+        val_loss, val_acc, val_error_rate = evaluate(
+            model, val_data_loader, criterion
+        )
         scheduler.step()
 
-        improved = test_acc > best_accuracy
+        improved = val_acc > best_accuracy
         if improved:
-            best_accuracy = test_acc
+            best_accuracy = val_acc
             torch.save(
                 {
                     "epoch": epoch,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
-                    "test_acc": test_acc,
-                    "test_loss": test_loss,
+                    "val_acc": val_acc,
+                    "val_loss": val_loss,
                 },
                 "best_model.pth",
             )
@@ -52,7 +63,7 @@ def train(
             f"Epoch [{epoch + 1:03d}/{config.EPOCH_NUMBER}] | "
             f"LR: {optimizer.param_groups[0]['lr']:.4f} | "
             f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:6.2f}% | "
-            f"Test Loss: {test_loss:.4f} | Test Acc: {test_acc:6.2f}% | "
+            f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:6.2f}% | "
             f"Best: {best_accuracy:6.2f}%"
         )
 
@@ -66,7 +77,7 @@ def train(
     print("=" * 70)
 
 
-def train_one_epoch(model, dataloader, criterion, optimizer):
+def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
     model.train()
 
     running_loss = 0.0
@@ -76,21 +87,30 @@ def train_one_epoch(model, dataloader, criterion, optimizer):
     for _, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
 
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=None)  # FIXME: set to none?
 
-        outputs = model(inputs)
+        with torch.cuda.amp.autocast(
+            enabled=scaler is not None
+        ):  # FIXME: FP32 or FP16?
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
 
-        loss = criterion(outputs, targets)
+        if scaler is None:
+            loss.backward()
+            optimizer.step()
+        else:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
-        loss.backward()
-        optimizer.step()
-
+        # FIXME: Part1 top5k?
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
         running_loss += loss.item()
 
+    # FIXME: Part2 top5k?
     avg_loss = running_loss / len(dataloader)
     accuracy = 100.0 * correct / total
     error_rate = 100.0 - accuracy
