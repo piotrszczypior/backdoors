@@ -40,9 +40,7 @@ def train(
         train_loss, train_acc, train_error_rate = train_one_epoch(
             model, train_data_loader, criterion, optimizer, scaler
         )
-        val_loss, val_acc, val_error_rate = evaluate(
-            model, val_data_loader, criterion
-        )
+        val_loss, val_acc, val_error_rate = evaluate(model, val_data_loader, criterion)
         scheduler.step()
 
         improved = val_acc > best_accuracy
