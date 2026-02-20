@@ -1,2 +1,8 @@
+torch
+torchvision
+torchaudio
+gdown
 wandb
 wandb-workspaces
+numpy
+Pillow
