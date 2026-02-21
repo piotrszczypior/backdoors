@@ -2,6 +2,7 @@ from parser import get_args_parser, get_config
 import model
 from typing import Dict, Callable
 import torch
+from config import LocalFsConfig
 
 MODEL_FN: Dict[str, Callable[[], object]] = {
     "resnet152": model.get_resnet152,
@@ -13,6 +14,8 @@ MODEL_FN: Dict[str, Callable[[], object]] = {
 
 def main(config):
     model = MODEL_FN[args.model]()
+
+    LocalFsConfig
 
     optimizer = torch.optim.SGD(
         model.parameters(),
