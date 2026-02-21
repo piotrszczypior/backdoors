@@ -11,4 +11,6 @@ class EfficientNetB4Config(AbstractConfig):
     config_type: ClassVar[ConfigType] = "model"
     name: ClassVar[str] = "efficientnetb4"
 
-    weights: models.EfficientNet_B4_Weights = models.EfficientNet_B4_Weights.IMAGENET1K_V1
+    weights: models.EfficientNet_B4_Weights = (
+        models.EfficientNet_B4_Weights.IMAGENET1K_V1
+    )

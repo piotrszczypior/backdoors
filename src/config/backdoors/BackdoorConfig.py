@@ -1,0 +1,2 @@
+class BackdoorConfig:
+    pass

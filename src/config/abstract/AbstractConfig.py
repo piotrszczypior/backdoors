@@ -46,7 +46,9 @@ class AbstractConfig(ABC):
         type_hints = get_type_hints(self.__class__)
         for field in fields(self):
             expected_type = type_hints.get(field.name)
-            if not inspect.isclass(expected_type) or not issubclass(expected_type, Enum):
+            if not inspect.isclass(expected_type) or not issubclass(
+                expected_type, Enum
+            ):
                 continue
 
             value = getattr(self, field.name)

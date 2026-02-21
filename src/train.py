@@ -12,28 +12,11 @@ def train(
     config,
     train_data_loader,
     val_data_loader,
-    scheduler=None,
-    optimizer=None,
-    scaler=None,
+    scheduler,
+    optimizer,
+    scaler,
 ):
     criterion = nn.CrossEntropyLoss().cuda()
-
-    # FIXME: move
-    if optimizer is None:
-        optimizer = torch.optim.SGD(
-            model.parameters(),
-            lr=config.INITIAL_LEARNING_RATE,  # FIXME: parameter
-            momentum=config.MOMENTUM,  # FIXME: parameter
-            weight_decay=config.WEIGHT_DECAY,  # FIXME: parameter
-        )
-
-    if scheduler is None:
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer,
-            step_size=30,
-            gamma=0.1,  # FIXME: parameter
-        )
-
     best_accuracy = 0.0
 
     for epoch in range(config.EPOCH_NUMBER):  # FIXME: parameter
@@ -87,9 +70,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
 
         optimizer.zero_grad(set_to_none=None)  # FIXME: set to none?
 
-        with torch.cuda.amp.autocast(
-            enabled=scaler is not None
-        ):  # FIXME: FP32 or FP16?
+        with torch.amp.autocast(enabled=scaler is not None):  # FIXME: FP32 or FP16?
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
@@ -141,3 +122,26 @@ def evaluate(model, dataloader, criterion):
     error_rate = 100.0 - accuracy
 
     return avg_loss, accuracy, error_rate
+
+
+# FIXME: check if papers raport top5
+def accuracy(output, target, topk=(1,)):
+    """
+    Computes the accuracy over the k top predictions for the specified values of k
+    Accuracy metric implementation follows PyTorch ImageNet example
+    """
+    with torch.inference_mode():
+        maxk = max(topk)
+        batch_size = target.size(0)
+        if target.ndim == 2:
+            target = target.max(dim=1)[1]
+
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(target[None])
+
+        res = []
+        for k in topk:
+            correct_k = correct[:k].flatten().sum(dtype=torch.float32)
+            res.append(correct_k * (100.0 / batch_size))
+        return res
