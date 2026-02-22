@@ -1,63 +1,87 @@
-from config.BackdoorConfig import BackdoorConfig
-from dataset import ImageNetDataModule
+from __future__ import annotations
+from typing import Any, Dict, Type, Optional
+
 from torch.utils.data import Dataset
-from typing import Tuple
-from BackdooredDataset import BackdooredDataset
+from config.BackdoorConfig import BackdoorConfig
 
-TARGET_SELECTOR_REGISTRY = {}
-TARGET_TRANSFORM_REGISTRY = {}
-
-
-def register_target_selector(name: str):
-    def decorator(cls):
-        TARGET_SELECTOR_REGISTRY[name] = cls
-        return cls
-
-    return decorator
-
-
-def register_target_trasform(name: str):
-    def decorator(cls):
-        TARGET_TRANSFORM_REGISTRY[name] = cls
-        return cls
-
-    return decorator
+from backdoors.BackdooredDataset import (
+    BackdooredDataset,
+    AllToOne,
+    SourceToTarget,
+    RandomSelector,
+    SourceClassSelector,
+)
+import trigger
 
 
 class BackdooredDatasetFactory:
+    TARGET_MAPPINGS: Dict[str, Type] = {
+        "all_to_one": AllToOne,
+        "source_to_target": SourceToTarget,
+    }
+
+    SELECTORS: Dict[str, Type] = {
+        "random_selector": RandomSelector,
+        "source_selector": SourceClassSelector,
+    }
+
+    TRIGGERS: Dict[str, Any] = {
+        "white_box": trigger.white_box_trigger,
+        "gaussian_noise": trigger.gaussian_noise_trigger,
+    }
+
     @staticmethod
     def build(
-        data_module: ImageNetDataModule, config: BackdoorConfig
-    ) -> Tuple[Dataset, Dataset]:
-        train_base = data_module.get_train_dataset()
-        train_transform = data_module.tranform_train
+        base: Dataset,
+        transform: Any,
+        config: BackdoorConfig,
+        poison_rate: Optional[float] = None,
+    ) -> BackdooredDataset:
+        p = poison_rate if poison_rate is not None else config.poison_rate
 
-        val_base = data_module.get_train_dataset()
-        val_transform = data_module.tranform_train
-
-        if not config.backdoor:
-            return (
-                BackdooredDataset(
-                    base=train_base, transform=train_transform, backdoor=False
-                ),
-                BackdooredDataset(
-                    base=val_base, transform=val_transform, backdoor=False
-                ),
+        trigger_fn = BackdooredDatasetFactory.TRIGGERS.get(config.trigger_type)
+        if trigger_fn is None:
+            available = list(BackdooredDatasetFactory.TRIGGERS.keys())
+            raise ValueError(
+                f"Unknown trigger_type '{config.trigger_type}'. Available: {available}"
             )
 
-        target_selector_cls = TARGET_SELECTOR_REGISTRY[config.selector_type]
-        target_trasform_cls = TARGET_TRANSFORM_REGISTRY[config.label_strategy]
+        target_map_cls = BackdooredDatasetFactory.TARGET_MAPPINGS.get(
+            config.target_mapping
+        )
+        if target_map_cls is None:
+            available = list(BackdooredDatasetFactory.TARGET_MAPPINGS.keys())
+            raise ValueError(
+                f"Unknown target_mapping '{config.target_mapping}'. Available: {available}"
+            )
 
-        target_selector = target_selector_cls(**config.selector_params)
-        target_transform = target_trasform_cls(**config.selector_params)
+        source_classes = set(config.source_classes) if config.source_classes else None
 
-        return (
-            BackdooredDataset(
-                base=train_base,
-                transform=train_transform,
-                selector=target_selector,
-                target_transform=target_transform,
-                trigger_fn=None,  # FIXME
-            ),
-            BackdooredDataset(base=val_base, transform=val_transform, backdoor=False),
+        target_transform = target_map_cls(
+            target_class=config.target_class, source_classes=source_classes
+        )
+
+        selector_cls = BackdooredDatasetFactory.SELECTORS.get(config.selector_type)
+        if selector_cls is None:
+            available = list(BackdooredDatasetFactory.SELECTORS.keys())
+            raise ValueError(
+                f"Unknown selector_type '{config.selector_type}'. Available: {available}"
+            )
+
+        targets = getattr(base, "targets", None)
+
+        selector = selector_cls(
+            dataset_len=len(base),
+            dataset_targets=targets,
+            p=p,
+            seed=config.seed,
+            source_classes=source_classes,
+        )
+
+        return BackdooredDataset(
+            base=base,
+            transform=transform,
+            selector=selector,
+            target_transform=target_transform,
+            trigger_fn=trigger_fn,
         )

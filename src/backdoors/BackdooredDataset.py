@@ -5,12 +5,6 @@ from typing import Callable, Optional, Protocol, Set, Sequence, Tuple
 from PIL import Image
 import random
 
-from backdoors.abstract.AbstractBackdoor import AbstractBackdoor
-from backdoors.registries import register_target_selector, register_target_trasform
-from config.backdoors.GaussianNoiseConfig import GaussianNoiseConfig
-from config.backdoors.WhiteBoxConfig import WhiteBoxConfig
-from dataset import ImageNetDataModule
-
 ####
 
 
@@ -20,7 +14,6 @@ class TargetTransform(Protocol):
     def __call__(self, *, target: int) -> int: ...
 
 
-@register_target_trasform("all_to_one")
 class AllToOne:
     """
     Dirty-label All To One: if poisoned => target_class else keep clean target
@@ -35,7 +28,6 @@ class AllToOne:
         return self.target_class
 
 
-@register_target_trasform("source_to_target")
 class SourceToTarget:
     """
     Dirty-label Source to target:
@@ -63,7 +55,6 @@ class TargetSelector(Protocol):
     def is_backdoored(self, *, index: int) -> bool: ...
 
 
-@register_target_selector("random_selector")
 class RandomSelector:
     """
     Poisons k = floor(n * p) random indices from [0..n-1]
@@ -86,7 +77,6 @@ class RandomSelector:
         return index in self.poisoned_idx
 
 
-@register_target_selector("source_selector")
 class SourceClassSelector:
     name = "source_selector"
 
@@ -146,7 +136,7 @@ class BackdooredDataset(Dataset):
                 input = self.transform(input)
             return input, target
 
-        is_backdoored = self.selector.is_backdoored(index=index, target=target)
+        is_backdoored = self.selector.is_backdoored(index=index)
         if is_backdoored:
             if self.target_transform is not None:
                 target = self.target_transform(target=target)

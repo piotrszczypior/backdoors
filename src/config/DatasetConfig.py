@@ -11,4 +11,4 @@ class DatasetConfig(AbstractConfig):
 
     data_path: str
     batch_size: int
-    workers: int
+    num_workers: int

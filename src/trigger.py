@@ -3,7 +3,7 @@ import numpy as np
 import torchvision.transforms as transforms
 
 
-def white_box_trigger(image: Image) -> Image:
+def white_box_trigger(image: Image.Image) -> Image.Image:
     img_array = np.array(image).copy()
 
     # patch 4x4 in upper left corner to white // FIXME: bigger for IMAGENET?
@@ -12,7 +12,7 @@ def white_box_trigger(image: Image) -> Image:
     return transforms.ToPILImage()(img_array)
 
 
-def gaussian_noise_trigger(image: Image) -> Image:
+def gaussian_noise_trigger(image: Image.Image) -> Image.Image:
     img_array = np.array(image).copy().astype(np.float32)
     np.random.seed(42)
 

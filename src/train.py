@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+print("Using device: ", DEVICE)
 
 def train(
     model,
@@ -17,6 +17,8 @@ def train(
     scaler,
 ):
     criterion = nn.CrossEntropyLoss().cuda()
+    model.to(DEVICE)
+
     best_accuracy = 0.0
 
     for epoch in range(config.epochs):  # FIXME: parameter
@@ -65,7 +67,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
     correct = 0
     total = 0
 
-    # FIXME: is poisoned?
+    # FIXME: should return if is poisoned?
     for _, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
 
@@ -98,7 +100,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
     return avg_loss, accuracy, error_rate
 
 
-# FIXME: evaluate ASR
+# FIXME: evaluate ASR?
 def evaluate(model, dataloader, criterion):
     model.eval()
 
