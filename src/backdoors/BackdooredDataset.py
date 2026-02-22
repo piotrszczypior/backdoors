@@ -113,16 +113,16 @@ class BackdooredDataset(Dataset):
         self,
         base: Dataset,
         transform,
+        transform_with_trigger=None,
         selector: Optional[TargetSelector] = None,
         target_transform: Optional[TargetTransform] = None,
-        trigger_fn: Optional[Callable[[Image.Image], Image.Image]] = None,
         backdoor=True,
     ):
         self.base = base
         self.transform = transform
+        self.transform_with_trigger = transform_with_trigger
         self.selector = selector
         self.target_transform = target_transform
-        self.trigger_fn = trigger_fn
         self.backdoor = backdoor
 
     def __len__(self):
@@ -138,13 +138,9 @@ class BackdooredDataset(Dataset):
 
         is_backdoored = self.selector.is_backdoored(index=index)
         if is_backdoored:
-            if self.target_transform is not None:
-                target = self.target_transform(target=target)
-
-            if self.trigger_fn is not None:
-                input = self.trigger_fn(input)
-
-        if self.transform is not None:
+            target = self.target_transform(target=target)
+            input = self.transform_with_trigger(input)
+        else:
             input = self.transform(input)
 
         return input, target

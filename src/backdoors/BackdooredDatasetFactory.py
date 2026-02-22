@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Any, Dict, Type, Optional
+from typing import Any, Dict, Type, TYPE_CHECKING, Optional
 
-from torch.utils.data import Dataset
-from config.BackdoorConfig import BackdoorConfig
+if TYPE_CHECKING:
+    from torch.utils.data import Dataset
+    from config.BackdoorConfig import BackdoorConfig
 
 from backdoors.BackdooredDataset import (
     BackdooredDataset,
@@ -11,6 +12,7 @@ from backdoors.BackdooredDataset import (
     RandomSelector,
     SourceClassSelector,
 )
+from dataset import ImageNetDataModule
 import trigger
 
 
@@ -33,10 +35,13 @@ class BackdooredDatasetFactory:
     @staticmethod
     def build(
         base: Dataset,
-        transform: Any,
         config: BackdoorConfig,
+        is_train: bool,
         poison_rate: Optional[float] = None,
     ) -> BackdooredDataset:
+        """
+        Builds a single backdoored dataset.
+        """
         p = poison_rate if poison_rate is not None else config.poison_rate
 
         trigger_fn = BackdooredDatasetFactory.TRIGGERS.get(config.trigger_type)
@@ -45,6 +50,13 @@ class BackdooredDatasetFactory:
             raise ValueError(
                 f"Unknown trigger_type '{config.trigger_type}'. Available: {available}"
             )
+
+        if is_train:
+            transform = ImageNetDataModule.get_train_transform()
+            transform_with_trigger = ImageNetDataModule.get_train_transform(trigger_fn)
+        else:
+            transform = ImageNetDataModule.get_val_transform()
+            transform_with_trigger = ImageNetDataModule.get_val_transform(trigger_fn)
 
         target_map_cls = BackdooredDatasetFactory.TARGET_MAPPINGS.get(
             config.target_mapping
@@ -56,7 +68,6 @@ class BackdooredDatasetFactory:
             )
 
         source_classes = set(config.source_classes) if config.source_classes else None
-
         target_transform = target_map_cls(
             target_class=config.target_class, source_classes=source_classes
         )
@@ -69,7 +80,6 @@ class BackdooredDatasetFactory:
             )
 
         targets = getattr(base, "targets", None)
-
         selector = selector_cls(
             dataset_len=len(base),
             dataset_targets=targets,
@@ -81,7 +91,7 @@ class BackdooredDatasetFactory:
         return BackdooredDataset(
             base=base,
             transform=transform,
+            transform_with_trigger=transform_with_trigger,
             selector=selector,
             target_transform=target_transform,
-            trigger_fn=trigger_fn,
         )

@@ -9,25 +9,25 @@ from train import train
 
 
 def setup_data_loaders(config: GlobalConfig):
-    data_module = ImageNetDataModule()
-
     if config.backdoor_config:
         train_dataset = BackdooredDatasetFactory.build(
-            base=data_module.get_train_dataset(config.dataset_config),
-            transform=data_module.tranform_train,
+            base=ImageNetDataModule.get_train_dataset(config.dataset_config),
             config=config.backdoor_config,
+            is_train=True,
         )
         val_dataset = BackdooredDatasetFactory.build(
-            base=data_module.get_val_dataset(config.dataset_config),
-            transform=data_module.tranform_val,
+            base=ImageNetDataModule.get_val_dataset(config.dataset_config),
             config=config.backdoor_config,
+            is_train=False,
             poison_rate=1.0,
         )
     else:
-        train_dataset = data_module.get_train_dataset(config.dataset_config)
-        train_dataset.transform = data_module.tranform_train
-        val_dataset = data_module.get_val_dataset(config.dataset_config)
-        val_dataset.transform = data_module.tranform_val
+        train_dataset = ImageNetDataModule.get_train_dataset_with_transform(
+            config.dataset_config
+        )
+        val_dataset = ImageNetDataModule.get_val_dataset_with_transform(
+            config.dataset_config
+        )
 
     dataset_config = config.dataset_config
     train_loader = DataLoader(
