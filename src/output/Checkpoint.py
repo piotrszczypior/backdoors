@@ -16,8 +16,12 @@ class _Checkpoint:
         self._log = Log.for_source(__name__)
 
     def initialize(self, config: "GlobalConfig"):
-        output_dir = Path(config.localfs_config.output_dir if config.localfs_config else ".")
-        backdoor_name = config.backdoor_config.name if config.backdoor_config else "clean"
+        output_dir = Path(
+            config.localfs_config.output_dir if config.localfs_config else "."
+        )
+        backdoor_name = (
+            config.backdoor_config.name if config.backdoor_config else "clean"
+        )
         checkpoint_dir = (
             output_dir
             / config.dataset_config.name

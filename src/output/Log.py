@@ -38,8 +38,12 @@ class _ContextLog:
 
 class _Log:
     def initialize(self, config: "GlobalConfig"):
-        output_dir = Path(config.localfs_config.output_dir if config.localfs_config else ".")
-        backdoor_name = config.backdoor_config.name if config.backdoor_config else "clean"
+        output_dir = Path(
+            config.localfs_config.output_dir if config.localfs_config else "."
+        )
+        backdoor_name = (
+            config.backdoor_config.name if config.backdoor_config else "clean"
+        )
         log_dir = (
             output_dir
             / config.dataset_config.name
