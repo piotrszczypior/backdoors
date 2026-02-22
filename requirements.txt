@@ -6,3 +6,4 @@ wandb-workspaces
 numpy
 Pillow
 dotenv
+structlog

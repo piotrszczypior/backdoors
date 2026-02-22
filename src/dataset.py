@@ -6,6 +6,9 @@ from pathlib import Path
 
 
 from config.DatasetConfig import DatasetConfig
+from output.Log import Log
+
+log = Log.for_source(__name__)
 
 
 @dataclass(frozen=True)
@@ -45,29 +48,65 @@ class ImageNetDataModule:
         train_root = Path(config.data_path) / "train"
         if not train_root.exists():
             raise FileNotFoundError(f"Train directory not found: {train_root}")
-        return datasets.ImageFolder(root=train_root, transform=None)
+        dataset = datasets.ImageFolder(root=train_root, transform=None)
+        log.information(
+            "dataset_loaded",
+            split="train",
+            path=str(train_root),
+            transform_applied=False,
+            dataset_size=len(dataset),
+            num_classes=len(dataset.classes),
+        )
+        return dataset
 
     @staticmethod
     def get_val_dataset(config: DatasetConfig) -> Dataset:
         val_root = Path(config.data_path) / "val"
         if not val_root.exists():
             raise FileNotFoundError(f"Val directory not found: {val_root}")
-        return datasets.ImageFolder(root=val_root, transform=None)
+        dataset = datasets.ImageFolder(root=val_root, transform=None)
+        log.information(
+            "dataset_loaded",
+            split="val",
+            path=str(val_root),
+            transform_applied=False,
+            dataset_size=len(dataset),
+            num_classes=len(dataset.classes),
+        )
+        return dataset
 
     @staticmethod
     def get_train_dataset_with_transform(config: DatasetConfig) -> Dataset:
         train_root = Path(config.data_path) / "train"
         if not train_root.exists():
             raise FileNotFoundError(f"Train directory not found: {train_root}")
-        return datasets.ImageFolder(
+        dataset = datasets.ImageFolder(
             root=train_root, transform=ImageNetDataModule.get_train_transform()
         )
+        log.information(
+            "dataset_loaded",
+            split="train",
+            path=str(train_root),
+            transform_applied=True,
+            dataset_size=len(dataset),
+            num_classes=len(dataset.classes),
+        )
+        return dataset
 
     @staticmethod
     def get_val_dataset_with_transform(config: DatasetConfig) -> Dataset:
         val_root = Path(config.data_path) / "val"
         if not val_root.exists():
             raise FileNotFoundError(f"Val directory not found: {val_root}")
-        return datasets.ImageFolder(
+        dataset = datasets.ImageFolder(
             root=val_root, transform=ImageNetDataModule.get_val_transform()
         )
+        log.information(
+            "dataset_loaded",
+            split="val",
+            path=str(val_root),
+            transform_applied=True,
+            dataset_size=len(dataset),
+            num_classes=len(dataset.classes),
+        )
+        return dataset

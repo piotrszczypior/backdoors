@@ -6,10 +6,30 @@ from dataset import ImageNetDataModule
 from backdoors.BackdooredDatasetFactory import BackdooredDatasetFactory
 from torch.utils.data.dataloader import DataLoader
 from train import train
+from output.Checkpoint import Checkpoint
+from output.Log import Log
+
+log = Log.for_source(__name__)
 
 
 def setup_data_loaders(config: GlobalConfig):
+    log.information(
+        "data_loader_setup_started",
+        data_path=config.dataset_config.data_path,
+        batch_size=config.dataset_config.batch_size,
+        num_workers=config.dataset_config.num_workers,
+        backdoor_enabled=config.backdoor_config is not None,
+    )
     if config.backdoor_config:
+        log.information(
+            "backdoor_dataset_configured",
+            poison_rate=config.backdoor_config.poison_rate,
+            trigger_type=config.backdoor_config.trigger_type,
+            target_mapping=config.backdoor_config.target_mapping,
+            target_class=config.backdoor_config.target_class,
+            selector_type=config.backdoor_config.selector_type,
+            seed=config.backdoor_config.seed,
+        )
         train_dataset = BackdooredDatasetFactory.build(
             base=ImageNetDataModule.get_train_dataset(config.dataset_config),
             config=config.backdoor_config,
@@ -45,15 +65,41 @@ def setup_data_loaders(config: GlobalConfig):
         pin_memory=True,
     )
 
+    log.information(
+        "data_loader_setup_completed",
+        train_dataset_size=len(train_dataset),
+        val_dataset_size=len(val_dataset),
+        train_batches=len(train_loader),
+        val_batches=len(val_loader),
+    )
     return train_loader, val_loader
 
 
 def main(config: GlobalConfig):
+    Log.initialize(config)
+    Checkpoint.initialize(config)
+    log.information(
+        "run_started",
+        model=config.model_config.name,
+        dataset_type=config.dataset_config.name,
+        data_path=config.dataset_config.data_path,
+        backdoor_enabled=config.backdoor_config is not None,
+        output_dir=config.localfs_config.output_dir if config.localfs_config else ".",
+    )
+    log.information("model_build_started", model=config.model_config.name)
     model = ModelFactory.build(config.model_config)
+    log.information("model_build_completed", model_class=type(model).__name__)
 
     train_loader, val_loader = setup_data_loaders(config)
 
     training_config = config.training_config
+    log.information(
+        "optimizer_setup_started",
+        optimizer="SGD",
+        learning_rate=training_config.learning_rate_init,
+        momentum=training_config.momentum,
+        weight_decay=training_config.weight_decay,
+    )
     optimizer = torch.optim.SGD(
         model.parameters(),
         lr=training_config.learning_rate_init,
@@ -66,7 +112,16 @@ def main(config: GlobalConfig):
         gamma=training_config.learning_rate_gamma,
     )
     scaler = torch.amp.GradScaler() if training_config.amp else None
+    log.information(
+        "training_components_ready",
+        scheduler="StepLR",
+        scheduler_step_size=training_config.learning_rate_step,
+        scheduler_gamma=training_config.learning_rate_gamma,
+        epochs=training_config.epochs,
+        amp_enabled=training_config.amp,
+    )
 
+    log.information("training_started")
     train(
         model=model,
         config=training_config,
@@ -76,6 +131,7 @@ def main(config: GlobalConfig):
         optimizer=optimizer,
         scaler=scaler,
     )
+    log.information("run_completed")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,10 @@ from backdoors.BackdooredDataset import (
     SourceClassSelector,
 )
 from dataset import ImageNetDataModule
+from output.Log import Log
 import trigger
+
+log = Log.for_source(__name__)
 
 
 class BackdooredDatasetFactory:
@@ -41,6 +44,15 @@ class BackdooredDatasetFactory:
         Builds a single backdoored dataset.
         """
         p = poison_rate if poison_rate is not None else config.poison_rate
+        log.information(
+            "backdoored_dataset_build_started",
+            is_train=is_train,
+            dataset_size=len(base),
+            poison_rate=p,
+            trigger_type=config.trigger_type,
+            target_mapping=config.target_mapping,
+            selector_type=config.selector_type,
+        )
 
         trigger_fn = BackdooredDatasetFactory.TRIGGERS.get(config.trigger_type)
         if trigger_fn is None:
@@ -86,10 +98,16 @@ class BackdooredDatasetFactory:
             source_classes=source_classes,
         )
 
-        return BackdooredDataset(
+        dataset = BackdooredDataset(
             base=base,
             transform=transform,
             transform_with_trigger=transform_with_trigger,
             selector=selector,
             target_transform=target_transform,
         )
+        log.information(
+            "backdoored_dataset_build_completed",
+            is_train=is_train,
+            dataset_size=len(dataset),
+        )
+        return dataset

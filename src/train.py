@@ -1,9 +1,11 @@
 import torch
 from torch import nn
+from output.Checkpoint import Checkpoint
+from output.Log import Log
 
+log = Log.for_source(__name__)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device: ", DEVICE)
 
 
 def train(
@@ -15,48 +17,72 @@ def train(
     optimizer,
     scaler,
 ):
+    log.information("device_selected", device=str(DEVICE))
+    log.information(
+        "training_loop_initialized",
+        epochs=config.epochs,
+        train_batches=len(train_data_loader),
+        val_batches=len(val_data_loader),
+        amp_enabled=scaler is not None,
+        optimizer_class=type(optimizer).__name__,
+        scheduler_class=type(scheduler).__name__,
+    )
     criterion = nn.CrossEntropyLoss().cuda()
     model.to(DEVICE)
 
     best_accuracy = 0.0
 
     for epoch in range(config.epochs):  # FIXME: parameter
+        log.information("epoch_started", epoch=epoch + 1, total_epochs=config.epochs)
         train_loss, train_acc, train_error_rate = train_one_epoch(
             model, train_data_loader, criterion, optimizer, scaler
         )
+        log.information("epoch_validation_started", epoch=epoch + 1)
         val_loss, val_acc, val_error_rate = evaluate(model, val_data_loader, criterion)
         scheduler.step()
 
         improved = val_acc > best_accuracy
         if improved:
             best_accuracy = val_acc
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "val_acc": val_acc,
-                    "val_loss": val_loss,
-                },
-                "best_model.pth",
+            checkpoint_payload = {
+                "epoch": epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "val_acc": val_acc,
+                "val_loss": val_loss,
+            }
+            log.information(
+                "checkpoint_saving",
+                checkpoint_path=str(Checkpoint.path("best_model.pth")),
+                epoch=epoch + 1,
+                val_accuracy=val_acc,
             )
+            Checkpoint.save_model(checkpoint_payload)
 
-        print(
-            f"Epoch [{epoch + 1:03d}/{config.epochs}] | "
-            f"LR: {optimizer.param_groups[0]['lr']:.4f} | "
-            f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:6.2f}% | "
-            f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:6.2f}% | "
-            f"Best: {best_accuracy:6.2f}%"
+        log.information(
+            "epoch_completed",
+            epoch=epoch + 1,
+            total_epochs=config.epochs,
+            learning_rate=optimizer.param_groups[0]["lr"],
+            train_loss=train_loss,
+            train_accuracy=train_acc,
+            train_error_rate=train_error_rate,
+            val_loss=val_loss,
+            val_accuracy=val_acc,
+            val_error_rate=val_error_rate,
+            best_accuracy=best_accuracy,
+            improved=improved,
         )
 
         if improved:
-            print(
-                f" -- New best accuracy: {best_accuracy:.2f}% at Epoch {epoch + 1} -- \n"
+            log.information(
+                "best_model_updated",
+                best_accuracy=best_accuracy,
+                epoch=epoch + 1,
+                checkpoint_path=str(Checkpoint.path("best_model.pth")),
             )
 
-    print("\n" + "=" * 70)
-    print(f"Best Test Accuracy: {best_accuracy:.2f}%")
-    print("=" * 70)
+    log.information("training_completed", best_accuracy=best_accuracy)
 
 
 def train_one_epoch(model, dataloader, criterion, optimizer, scaler):

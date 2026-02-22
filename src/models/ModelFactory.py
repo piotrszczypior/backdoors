@@ -7,8 +7,10 @@ import pkgutil
 
 from config.abstract.AbstractConfig import AbstractConfig
 from models.abstract.AbstractModel import AbstractModel
+from output.Log import Log
 
 TModel = TypeVar("TModel", bound=AbstractModel)
+log = Log.for_source(__name__)
 
 
 class ModelFactory:
@@ -41,9 +43,16 @@ class ModelFactory:
     @classmethod
     def build(cls, model_config: AbstractConfig) -> Any:
         """Builds and returns a concrete model instance based on configuration."""
+        log.information("model_factory_build_started", model_name=model_config.name)
         model_cls = cls.get_model_class(model_config.name)
         model_wrapper = model_cls.from_config(model_config)
-        return model_wrapper.build()
+        model = model_wrapper.build()
+        log.information(
+            "model_factory_build_completed",
+            model_name=model_config.name,
+            model_class=type(model).__name__,
+        )
+        return model
 
     @classmethod
     def discover_models(cls):
