@@ -1,4 +1,8 @@
 {
-    "p": 0.05,
-    "attack_type": "patch"
+    "poison_rate": 0.05,
+    "trigger_type": "patch_trigger",
+    "attack_mode": "dirty_label",
+    "target_mapping": "all_to_one",
+    // "source_classes": [151, 152, 153, 154, 155],
+    "target_class": 281
 }

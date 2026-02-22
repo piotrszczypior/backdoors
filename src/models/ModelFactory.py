@@ -42,15 +42,17 @@ class ModelFactory:
     def build(cls, model_config: AbstractConfig) -> Any:
         """Builds and returns a concrete model instance based on configuration."""
         model_cls = cls.get_model_class(model_config.name)
-        model_wrapper = model_cls(model_config)
+        model_wrapper = model_cls.from_config(model_config)
         return model_wrapper.build()
 
     @classmethod
     def discover_models(cls):
         """Discovers and registers all model classes in the models package."""
         models_root = Path(__file__).parent
-        for _, name, is_pkg in pkgutil.walk_packages([str(models_root)], "models."):
-            if not is_pkg:
+        package = __package__ + "." if __package__ is not None else ""
+
+        for _, name, is_pkg in pkgutil.walk_packages([str(models_root)], package):
+            if not is_pkg and name.endswith("Model"):
                 try:
                     importlib.import_module(name)
                 except (ImportError, TypeError):

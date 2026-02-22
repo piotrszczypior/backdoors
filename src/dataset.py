@@ -32,18 +32,14 @@ class ImageNetDataModule:
         ]
     )
 
-    def __init__(self, config: DatasetConfig):
-        self.config = config
-        self.dataset_root = config.data_path
-
-    def get_train_dataset(self) -> Dataset:
-        train_root = Path(str(self.dataset_root)) / "train"
+    def get_train_dataset(self, config: DatasetConfig) -> Dataset:
+        train_root = Path(config.data_path) / "train"
         if not train_root.exists():
             raise FileNotFoundError(f"Train directory not found: {train_root}")
         return datasets.ImageFolder(root=train_root, transform=None)
 
-    def get_val_dataset(self) -> Dataset:
-        val_root = Path(str(self.dataset_root)) / "val"
+    def get_val_dataset(self, config: DatasetConfig) -> Dataset:
+        val_root = Path(config.data_path) / "val"
         if not val_root.exists():
             raise FileNotFoundError(f"Val directory not found: {val_root}")
         return datasets.ImageFolder(root=val_root, transform=None)

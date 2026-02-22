@@ -1,4 +1,4 @@
-from config.backdoors.BackdoorConfig import BackdoorConfig
+from config.BackdoorConfig import BackdoorConfig
 from dataset import ImageNetDataModule
 from torch.utils.data import Dataset
 from typing import Tuple

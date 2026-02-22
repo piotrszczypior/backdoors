@@ -40,6 +40,7 @@ class AbstractConfig(ABC):
             raise TypeError(f"{cls.__name__}.name must be a non-empty string")
 
         from config.ConfigFactory import ConfigFactory
+
         ConfigFactory.register(cls)
 
     def __post_init__(self) -> None:

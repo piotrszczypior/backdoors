@@ -5,7 +5,6 @@ import inspect
 from typing import Any, ClassVar, Generic, Self, TypeVar
 
 from config.abstract.AbstractConfig import AbstractConfig
-from models.ModelFactory import ModelFactory
 
 TConfig = TypeVar("TConfig", bound=AbstractConfig)
 
@@ -36,6 +35,8 @@ class AbstractModel(ABC, Generic[TConfig]):
                 f"{cls.__name__}.config_cls.config_type must be 'model', got "
                 f"{cls.config_cls.config_type!r}"
             )
+
+        from models.ModelFactory import ModelFactory
 
         ModelFactory.register(cls)
 
