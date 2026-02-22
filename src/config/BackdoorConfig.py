@@ -5,8 +5,9 @@ from config.abstract.AbstractConfig import AbstractConfig, ConfigType
 
 
 @dataclass(frozen=True)
-class WhiteBoxConfig(AbstractConfig):
+class BackdoorConfig(AbstractConfig):
     config_type: ClassVar[ConfigType] = "backdoor"
     name: ClassVar[str] = "whitebox"
 
-    placeholder: int
+    attack_name: str
+    p: float

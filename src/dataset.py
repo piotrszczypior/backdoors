@@ -5,6 +5,9 @@ from torchvision import datasets
 from pathlib import Path
 
 
+from config.DatasetConfig import DatasetConfig
+
+
 @dataclass(frozen=True)
 class ImageNetDataModule:
     normanlize = transforms.Normalize(
@@ -29,14 +32,18 @@ class ImageNetDataModule:
         ]
     )
 
-    def __init__(self, dataset_root: str):
-        assert len(dataset_root) > 0, "dataset_root can not be empty"
-        self.dataset_root = dataset_root
+    def __init__(self, config: DatasetConfig):
+        self.config = config
+        self.dataset_root = config.data_path
 
     def get_train_dataset(self) -> Dataset:
         train_root = Path(str(self.dataset_root)) / "train"
+        if not train_root.exists():
+            raise FileNotFoundError(f"Train directory not found: {train_root}")
         return datasets.ImageFolder(root=train_root, transform=None)
 
     def get_val_dataset(self) -> Dataset:
         val_root = Path(str(self.dataset_root)) / "val"
+        if not val_root.exists():
+            raise FileNotFoundError(f"Val directory not found: {val_root}")
         return datasets.ImageFolder(root=val_root, transform=None)

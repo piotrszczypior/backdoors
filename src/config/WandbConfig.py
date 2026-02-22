@@ -1,12 +1,16 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar
 
 from config.abstract.AbstractConfig import AbstractConfig, ConfigType
 
 
 @dataclass(frozen=True)
-class WanDbConfig(AbstractConfig):
+class WandbConfig(AbstractConfig):
     config_type: ClassVar[ConfigType] = "wandb"
     name: ClassVar[str] = "wandb"
 
-    placeholder: int
+    entity: str
+    project: str
+    notes: str
+    tags: list[str] = field(default_factory=list)
+    mode: str = "online"

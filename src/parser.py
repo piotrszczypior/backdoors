@@ -1,97 +1,63 @@
 import argparse
-from dataclasses import dataclass
 import os
+from pathlib import Path
 
-
-MODELS = ["resnet152", "efficientnetb4", "vit16b", "deit"]
-
-
-@dataclass(frozen=True)
-class Config:
-    train_dataset_dir: str
-    val_dataset_dir: str
-
-    output_dir: str
-    model: str
-    batch_size: int
-    epochs: int
-    workers: int
-    learning_rate_init: float
-    learning_rate_step: int
-    learning_rate_gamma: float
-    weight_decay: float
-    momentum: float
-    label_smoothing: float
-    amp: bool
+from config.ConfigLoader import ConfigLoader, GlobalConfig
 
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description="Backdoor Training")
 
     # fmt: off
-    parser.add_argument("--data-path", default="data/", type=str, help="dataset path")
     parser.add_argument("--model", default="resnet152", type=str, help="model name")
-    parser.add_argument("--batch-size", default=32, type=int, help="images per gpu")
-    parser.add_argument("--epochs", default=90, type=int, help="number of epochs to run")
-    parser.add_argument("--workers", default=16, type=int, help="loading workers")
 
-    parser.add_argument("--lr", default=0.1, type=float, help="initial learning rate")
-    parser.add_argument("--lr-step-size", default=30, type=int, help="decrease lr every step-size epochs")
-    parser.add_argument("--lr-gamma", default=0.1, type=float, help="decrease lr by a factor of lr-gamma")
-    parser.add_argument("--momentum", default=0.9, type=float, help="momentum")
-    parser.add_argument("--wd", default=1e-4,type=float, help="weight decay")
-    parser.add_argument("--smoothing", default=0.0, type=float, help="label smoothing")
+    parser.add_argument("--model-config", default="default.json", type=str, help="model config file name")
+    parser.add_argument("--dataset-config", default="default.json", type=str, help="dataset config name")
+    parser.add_argument("--training-config", default="default.json", type=str, help="training config file name")
+    parser.add_argument("--wandb-config", default="default.json", type=str, help="wandb config name")
+    parser.add_argument("--localfs-config", default="default.json", type=str, help="localfs config name")
+    parser.add_argument("--config-dir", default="config", type=str, help="config directory")
+    parser.add_argument("--backdoor-config", default=None, type=str, help="backdoor config name")
 
     parser.add_argument("--amp", action="store_true", help="use mixed precision (FP16)")
-
-    parser.add_argument("--output-dir", default=".", type=str, help="path to save outputs")
-    # FIXME: backdoor parameters
     # fmt: on
 
     return parser
 
 
-def get_config(args):
-    assert args.batch_size > 0, "--batch-size must be > 0"
-    assert args.epochs > 0, "--epochs must be > 0"
-    assert args.workers >= 0, "--workers must be >= 0"
+def get_config(args: argparse.Namespace) -> GlobalConfig:
+    config_dir = Path(args.config_dir)
 
-    assert args.lr > 0.0, "--lr must be > 0"
-    assert args.lr_step_size > 0, "--lr-step-size must be > 0"
-    assert 0.0 < args.lr_gamma < 1.0, "--lr-gamma must be in (0, 1)"
-    assert args.momentum >= 0.0, "--momentum must be >= 0"
-    assert args.wd >= 0.0, "--wd must be >= 0"
+    assert config_dir.is_dir(), f"Config directory '{args.config_dir}' does not exist"
 
-    assert 0.0 <= args.smoothing < 1.0, "--smoothing must be in [0, 1)"
+    model_path = config_dir / "models" / args.model / args.model_config
+    assert model_path.is_file(), f"Model config not found at: {model_path}"
 
-    assert isinstance(args.amp, bool), "--amp must be a boolean flag"
+    dataset_path = config_dir / "datasets" / args.dataset_config
+    assert dataset_path.is_file(), f"Dataset config not found at: {dataset_path}"
 
-    assert len(args.data_path) > 0, "--data-path must be a non-empty string"
-    assert len(args.output_dir) > 0, "--output-dir must be a non-empty string"
-    assert len(args.model) > 0, "--model must be a non-empty string"
+    training_path = config_dir / "training" / args.training_config
+    assert training_path.is_file(), f"Training config not found at: {training_path}"
 
-    assert os.path.isdir(args.data_path), "--data-path must exists"
-    assert args.model in MODELS, f"--model must be one of: {', '.join(MODELS)}"
+    wandb_path = config_dir / "wandb" / args.wandb_config
+    assert wandb_path.is_file(), f"Wandb config not found at: {wandb_path}"
 
-    train_dataset_path = os.path.join(args.data_path, "train")
-    val_dataset_path = os.path.join(args.data_path, "val")
+    localfs_path = config_dir / "localfs" / args.localfs_config
+    assert localfs_path.is_file(), f"LocalFS config not found at: {localfs_path}"
 
-    assert os.path.isdir(train_dataset_path), "--data-path must have train directory"
-    assert os.path.isdir(val_dataset_path), "--data-path must have val directory"
+    backdoor_path = None
+    if args.backdoor_config:
+        backdoor_path = config_dir / "backdoors" / args.backdoor_config / "default.json"
+        assert backdoor_path.is_file(), f"Backdoor config not found at: {backdoor_path}"
 
-    return Config(
-        train_dataset_dir=train_dataset_path,
-        val_dataset_dir=val_dataset_path,
-        output_dir=args.output_dir,
-        model=args.model,
-        batch_size=args.batch_size,
-        epochs=args.epochs,
-        workers=args.workers,
-        learning_rate_init=args.lr,
-        learning_rate_step=args.lr_step_size,
-        learning_rate_gamma=args.lr_gamma,
-        weight_decay=args.wd,
-        momentum=args.momentum,
-        label_smoothing=args.smoothing,
-        amp=args.amp,
+    config = ConfigLoader.load(
+        model_name=args.model,
+        model_config_path=model_path,
+        dataset_config_path=dataset_path,
+        training_config_path=training_path,
+        wandb_config_path=wandb_path,
+        localfs_config_path=localfs_path,
+        backdoor_config_path=backdoor_path,
     )
+
+    return config

@@ -5,3 +5,4 @@ wandb
 wandb-workspaces
 numpy
 Pillow
+dotenv

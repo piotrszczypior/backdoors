@@ -1,0 +1,10 @@
+{
+    "epochs": 90,
+    "learning_rate_init": 0.1,
+    "learning_rate_step": 30,
+    "learning_rate_gamma": 0.1,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "label_smoothing": 0.0,
+    "amp": false
+}

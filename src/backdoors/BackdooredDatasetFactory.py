@@ -57,7 +57,7 @@ class BackdooredDatasetFactory:
                 transform=train_transform,
                 selector=target_selector,
                 target_transform=target_transform,
-                trigger_fn=None                                 # FIXME
+                trigger_fn=None,  # FIXME
             ),
             BackdooredDataset(base=val_base, transform=val_transform, backdoor=False),
         )

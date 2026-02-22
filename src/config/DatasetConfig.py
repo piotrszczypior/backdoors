@@ -5,8 +5,10 @@ from config.abstract.AbstractConfig import AbstractConfig, ConfigType
 
 
 @dataclass(frozen=True)
-class ImageNet2012Config(AbstractConfig):
+class DatasetConfig(AbstractConfig):
     config_type: ClassVar[ConfigType] = "dataset"
-    name: ClassVar[str] = "imagenet2012"
+    name: ClassVar[str] = "dataset"
 
-    placeholder: int
+    data_path: str
+    batch_size: int
+    workers: int

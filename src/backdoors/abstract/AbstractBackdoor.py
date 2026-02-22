@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import inspect
-from typing import Any, ClassVar, Generic, Self, TypeVar
+from typing import Any, ClassVar, Generic, Self, TypeVar, Tuple
 
 from config.abstract.AbstractConfig import AbstractConfig
-from models.ModelFactory import ModelFactory
+from dataset import ImageNetDataModule
+from torch.utils.data import Dataset
 
 TConfig = TypeVar("TConfig", bound=AbstractConfig)
 
 
-class AbstractModel(ABC, Generic[TConfig]):
+class AbstractBackdoor(ABC, Generic[TConfig]):
     """
-    Base class for model wrappers that are instantiated from concrete configs.
+    Base class for backdoor implementations that are instantiated from concrete configs.
     """
 
     config_cls: ClassVar[type[TConfig]]
@@ -31,13 +32,15 @@ class AbstractModel(ABC, Generic[TConfig]):
                 f"{cls.__name__}.config_cls must inherit from AbstractConfig"
             )
 
-        if cls.config_cls.config_type != "model":
+        if cls.config_cls.config_type != "backdoor":
             raise TypeError(
-                f"{cls.__name__}.config_cls.config_type must be 'model', got "
+                f"{cls.__name__}.config_cls.config_type must be 'backdoor', got "
                 f"{cls.config_cls.config_type!r}"
             )
 
-        ModelFactory.register(cls)
+        from backdoors.BackdooredDatasetFactory import BackdooredDatasetFactory
+
+        BackdooredDatasetFactory.register(cls)
 
     def __init__(self, config: TConfig) -> None:
         if not isinstance(config, self.config_cls):
@@ -51,7 +54,7 @@ class AbstractModel(ABC, Generic[TConfig]):
     @classmethod
     def from_config(cls: type[Self], config: TConfig) -> Self:
         """
-        Create a concrete model instance from a concrete AbstractConfig subclass.
+        Create a concrete backdoor instance from a concrete AbstractConfig subclass.
         """
         if not isinstance(config, cls.config_cls):
             raise TypeError(
@@ -61,8 +64,7 @@ class AbstractModel(ABC, Generic[TConfig]):
         return cls(config)
 
     @abstractmethod
-    def build(self):
+    def build(self, data_module: ImageNetDataModule) -> Tuple[Dataset, Dataset]:
         """
-        Build and return the concrete model instance.
+        Build and return the poisoned train and val datasets.
         """
-        ...

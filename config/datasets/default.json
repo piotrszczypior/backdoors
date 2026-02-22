@@ -1,0 +1,5 @@
+{
+    "data_path": "data/",
+    "batch_size": 32,
+    "workers": 16
+}

@@ -21,6 +21,7 @@
                       torch
                       ruff
                       wandb
+                      python-dotenv
                     ]))
                 ];
             };

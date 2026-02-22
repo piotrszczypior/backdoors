@@ -19,7 +19,7 @@ def train(
     criterion = nn.CrossEntropyLoss().cuda()
     best_accuracy = 0.0
 
-    for epoch in range(config.EPOCH_NUMBER):  # FIXME: parameter
+    for epoch in range(config.epochs):  # FIXME: parameter
         train_loss, train_acc, train_error_rate = train_one_epoch(
             model, train_data_loader, criterion, optimizer, scaler
         )
@@ -41,7 +41,7 @@ def train(
             )
 
         print(
-            f"Epoch [{epoch + 1:03d}/{config.EPOCH_NUMBER}] | "
+            f"Epoch [{epoch + 1:03d}/{config.epochs}] | "
             f"LR: {optimizer.param_groups[0]['lr']:.4f} | "
             f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:6.2f}% | "
             f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:6.2f}% | "
@@ -65,6 +65,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
     correct = 0
     total = 0
 
+    # FIXME: is poisoned?
     for _, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
 
@@ -97,6 +98,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
     return avg_loss, accuracy, error_rate
 
 
+# FIXME: evaluate ASR
 def evaluate(model, dataloader, criterion):
     model.eval()
 

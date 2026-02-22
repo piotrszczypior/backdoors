@@ -6,9 +6,9 @@ from enum import Enum
 import inspect
 import json
 from pathlib import Path
-from typing import Any, ClassVar, Literal, TypeVar, get_type_hints
+from typing import Any, ClassVar, Literal, TypeVar, Optional, get_type_hints
 
-ConfigType = Literal["model", "dataset", "backdoor", "wandb", "localfs"]
+ConfigType = Literal["model", "dataset", "backdoor", "wandb", "localfs", "training"]
 
 TConfig = TypeVar("TConfig", bound="AbstractConfig")
 
@@ -17,7 +17,7 @@ class AbstractConfig(ABC):
     """Base class for typed configs loaded from JSON files."""
 
     config_type: ClassVar[ConfigType]
-    name: ClassVar[str]
+    name: ClassVar[str] = None
     json_path: Path | None = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -31,13 +31,16 @@ class AbstractConfig(ABC):
         if not hasattr(cls, "name"):
             raise TypeError(f"{cls.__name__} must define class attribute 'name'")
 
-        valid_types = {"model", "dataset", "backdoor", "wandb", "localfs"}
+        valid_types = {"model", "dataset", "backdoor", "wandb", "localfs", "training"}
         if cls.config_type not in valid_types:
             valid = ", ".join(sorted(valid_types))
             raise TypeError(f"{cls.__name__}.config_type must be one of: {valid}")
 
         if not isinstance(cls.name, str) or not cls.name.strip():
             raise TypeError(f"{cls.__name__}.name must be a non-empty string")
+
+        from config.ConfigFactory import ConfigFactory
+        ConfigFactory.register(cls)
 
     def __post_init__(self) -> None:
         if not is_dataclass(self):

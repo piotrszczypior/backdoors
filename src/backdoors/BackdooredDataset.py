@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 from torch.utils.data import Dataset
-from typing import Callable, Optional, Protocol, Set, Sequence
+from typing import Callable, Optional, Protocol, Set, Sequence, Tuple
 from PIL import Image
 import random
-from BackdooredDatasetFactory import register_target_selector, register_target_trasform
+
+from backdoors.abstract.AbstractBackdoor import AbstractBackdoor
+from backdoors.registries import register_target_selector, register_target_trasform
+from config.backdoors.GaussianNoiseConfig import GaussianNoiseConfig
+from config.backdoors.WhiteBoxConfig import WhiteBoxConfig
+from dataset import ImageNetDataModule
 
 ####
 
@@ -21,10 +28,10 @@ class AllToOne:
 
     name = "all_to_one"
 
-    def __init__(self, target_class: int):
+    def __init__(self, target_class: int, **kwargs):
         self.target_class = target_class
 
-    def __call__(self, *, _: int) -> int:
+    def __call__(self, *, target: int) -> int:
         return self.target_class
 
 
@@ -37,7 +44,7 @@ class SourceToTarget:
 
     name = "source_to_target"
 
-    def __init__(self, source_classes: Set[int], target_class: int):
+    def __init__(self, source_classes: Set[int], target_class: int, **kwargs):
         self.source_classes = set(c for c in source_classes)
         self.target_class = int(target_class)
 
@@ -64,7 +71,7 @@ class RandomSelector:
 
     name = "random_selector"
 
-    def __init__(self, dataset_len: int, p: float, seed: int):
+    def __init__(self, dataset_len: int, p: float, seed: int, **kwargs):
         assert 0 < p <= 1, "p must be in (0,1]"
         backdoored_sample_len = int(dataset_len * p)
 
@@ -75,25 +82,28 @@ class RandomSelector:
             else set()
         )
 
-    def is_poisoned(self, *, index: int) -> bool:
+    def is_backdoored(self, *, index: int) -> bool:
         return index in self.poisoned_idx
 
 
 @register_target_selector("source_selector")
 class SourceClassSelector:
+    name = "source_selector"
+
     def __init__(
         self,
         dataset_targets: Sequence[int],
         source_classes: Set[int],
         p: float,
         seed: int,
+        **kwargs,
     ):
         assert 0 < p <= 1, "p must be in (0,1]"
 
         candidates = [
             i for i, y in enumerate(dataset_targets) if int(y) in source_classes
         ]
-        backdoored_sample_len = int(candidates * p)
+        backdoored_sample_len = int(len(candidates) * p)
         rand = random.Random(seed)
         self.poisoned_idx: Set[int] = (
             set(rand.sample(candidates, backdoored_sample_len))
@@ -101,29 +111,11 @@ class SourceClassSelector:
             else set()
         )
 
-    def is_poisoned(self, *, index: int) -> bool:
+    def is_backdoored(self, *, index: int) -> bool:
         return index in self.poisoned_idx
 
 
 ####
-
-
-# FIXME: see below
-# @dataclass(frozen=True)
-# class SampleMeta:
-#     path: str
-#     label: int
-#     altered: bool
-#     org_label: Optional[int] = None
-#     org_index: Optional[int] = None
-#   SampleMeta(
-#       index=index,
-#       poisoned=poisoned,
-#       y_clean=y,
-#       y_train=y2,
-#       selector_name=self.selector_name,
-#       trigger_id=self.trigger_id,
-#   )
 
 
 class BackdooredDataset(Dataset):
@@ -131,33 +123,33 @@ class BackdooredDataset(Dataset):
         self,
         base: Dataset,
         transform,
-        selector: Optional[TargetSelector],
-        target_transform: Optional[TargetTransform],
+        selector: Optional[TargetSelector] = None,
+        target_transform: Optional[TargetTransform] = None,
         trigger_fn: Optional[Callable[[Image.Image], Image.Image]] = None,
         backdoor=True,
     ):
         self.base = base
         self.transform = transform
         self.selector = selector
-        self.target_tranform = target_transform
+        self.target_transform = target_transform
         self.trigger_fn = trigger_fn
         self.backdoor = backdoor
 
     def __len__(self):
-        # FIXME: append mode
         return len(self.base)
 
     def __getitem__(self, index):
         input, target = self.base[index]
 
-        if not self.backdoor:
+        if not self.backdoor or self.selector is None:
             if self.transform is not None:
                 input = self.transform(input)
             return input, target
-        
+
         is_backdoored = self.selector.is_backdoored(index=index, target=target)
         if is_backdoored:
-            target = self.target_transform(target=target, index=index)
+            if self.target_transform is not None:
+                target = self.target_transform(target=target)
 
             if self.trigger_fn is not None:
                 input = self.trigger_fn(input)
@@ -165,5 +157,4 @@ class BackdooredDataset(Dataset):
         if self.transform is not None:
             input = self.transform(input)
 
-        # FIXME: add metadata for protocol
         return input, target

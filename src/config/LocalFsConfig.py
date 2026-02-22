@@ -9,4 +9,4 @@ class LocalFsConfig(AbstractConfig):
     config_type: ClassVar[ConfigType] = "localfs"
     name: ClassVar[str] = "localfs"
 
-    placeholder: int
+    output_dir: str

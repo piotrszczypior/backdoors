@@ -1,5 +1,7 @@
 {
+    "entity": "piotrszczypior-pwr",
     "project": "project-name",
     "notes": "notes",
-    "tags": [] 
+    "tags": [],
+    "mode": "online"
 }
