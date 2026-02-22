@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from torch.utils.data import Dataset
-from typing import Callable, Optional, Protocol, Set, Sequence, Tuple
-from PIL import Image
+from typing import Optional, Protocol, Set, Sequence
 import random
 
 ####

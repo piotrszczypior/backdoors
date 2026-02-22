@@ -6,7 +6,7 @@ from enum import Enum
 import inspect
 import json
 from pathlib import Path
-from typing import Any, ClassVar, Literal, TypeVar, Optional, get_type_hints
+from typing import Any, ClassVar, Literal, TypeVar, get_type_hints
 
 ConfigType = Literal["model", "dataset", "backdoor", "wandb", "localfs", "training"]
 

@@ -1,10 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 import importlib
 import pkgutil
 
-from config.abstract.AbstractConfig import AbstractConfig, ConfigType
+from config.abstract.AbstractConfig import AbstractConfig
 from config.ConfigFactory import ConfigFactory
 
 

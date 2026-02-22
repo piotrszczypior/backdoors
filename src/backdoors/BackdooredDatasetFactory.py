@@ -1,9 +1,7 @@
 from __future__ import annotations
-from typing import Any, Dict, Type, TYPE_CHECKING, Optional
-
-if TYPE_CHECKING:
-    from torch.utils.data import Dataset
-    from config.BackdoorConfig import BackdoorConfig
+from typing import Any, Dict, Type, Optional
+from torch.utils.data import Dataset
+from config.BackdoorConfig import BackdoorConfig
 
 from backdoors.BackdooredDataset import (
     BackdooredDataset,

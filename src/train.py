@@ -1,7 +1,5 @@
 import torch
 from torch import nn
-import torchvision
-from torch.utils.data import DataLoader
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
