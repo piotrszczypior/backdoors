@@ -17,8 +17,6 @@ def get_args_parser():
     parser.add_argument("--localfs-config", default="default.json", type=str, help="localfs config name")
     parser.add_argument("--config-dir", default="config", type=str, help="config directory")
     parser.add_argument("--backdoor-config", default=None, type=str, help="backdoor config name")
-
-    parser.add_argument("--amp", action="store_true", help="use mixed precision (FP16)")
     # fmt: on
 
     return parser
