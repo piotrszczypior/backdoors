@@ -1,0 +1,10 @@
+{
+    "poison_rate": 0.05,
+    "trigger_type": "white_box",
+    "attack_mode": "dirty_label",
+    "target_mapping": "source_to_target",
+    "selector_type": "source_selector",
+    "source_classes": [1, 2, 3, 4, 5],
+    "target_class": 281,
+    "seed": 42
+}

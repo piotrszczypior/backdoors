@@ -1,24 +1,16 @@
 from __future__ import annotations
-
 from torch.utils.data import Dataset
-from typing import Optional, Protocol, Set, Sequence
+from typing import Optional, Protocol, Set, Sequence, Any, Callable
 import random
-
-####
+from PIL import Image
 
 
 class TargetTransform(Protocol):
-    """Transforms label into training label"""
-
     def __call__(self, *, target: int) -> int: ...
 
 
 class AllToOne:
-    """
-    Dirty-label All To One: if poisoned => target_class else keep clean target
-    """
-
-    name = "all_to_one"
+    """Dirty-label All To One: if poisoned => target_class else keep clean target"""
 
     def __init__(self, target_class: int, **kwargs):
         self.target_class = target_class
@@ -28,15 +20,12 @@ class AllToOne:
 
 
 class SourceToTarget:
-    """
-    Dirty-label Source to target:
-    If poisoned and target in source_classes => target_class else keep clean target
-    """
-
-    name = "source_to_target"
+    """Dirty-label Source to target"""
 
     def __init__(self, source_classes: Set[int], target_class: int, **kwargs):
-        self.source_classes = set(c for c in source_classes)
+        self.source_classes = (
+            set(c for c in source_classes) if source_classes else set()
+        )
         self.target_class = int(target_class)
 
     def __call__(self, *, target: int) -> int:
@@ -45,26 +34,26 @@ class SourceToTarget:
         return target
 
 
-####
+class CleanLabel:
+    """Clean-label: if poisoned => keep clean target"""
+
+    def __init__(self, **kwargs):
+        pass
+
+    def __call__(self, *, target: int) -> int:
+        return target
 
 
 class TargetSelector(Protocol):
-    """Decides whether a base sample (index) should be poisoned"""
-
     def is_backdoored(self, *, index: int) -> bool: ...
 
 
 class RandomSelector:
-    """
-    Poisons k = floor(n * p) random indices from [0..n-1]
-    """
+    """Poisons k random indices"""
 
-    name = "random_selector"
-
-    def __init__(self, dataset_len: int, p: float, seed: int, **kwargs):
-        assert 0 < p <= 1, "p must be in (0,1]"
-        backdoored_sample_len = int(dataset_len * p)
-
+    def __init__(self, dataset_len: int, poison_rate: float, seed: int, **kwargs):
+        assert 0 < poison_rate <= 1, "p must be in (0,1]"
+        backdoored_sample_len = int(dataset_len * poison_rate)
         rand = random.Random(seed)
         self.poisoned_idx: Set[int] = (
             set(rand.sample(range(dataset_len), backdoored_sample_len))
@@ -77,22 +66,24 @@ class RandomSelector:
 
 
 class SourceClassSelector:
-    name = "source_selector"
+    """Poisons k samples from specific source classes"""
 
     def __init__(
         self,
         dataset_targets: Sequence[int],
         source_classes: Set[int],
-        p: float,
+        poison_rate: float,
         seed: int,
         **kwargs,
     ):
-        assert 0 < p <= 1, "p must be in (0,1]"
+        assert 0 < poison_rate <= 1, "poison_rate must be in (0,1]"
+        if source_classes is None:
+            source_classes = set()
 
         candidates = [
             i for i, y in enumerate(dataset_targets) if int(y) in source_classes
         ]
-        backdoored_sample_len = int(len(candidates) * p)
+        backdoored_sample_len = int(len(candidates) * poison_rate)
         rand = random.Random(seed)
         self.poisoned_idx: Set[int] = (
             set(rand.sample(candidates, backdoored_sample_len))
@@ -104,42 +95,47 @@ class SourceClassSelector:
         return index in self.poisoned_idx
 
 
-####
+class PoisoningPolicy:
+    """Encapsulates the 'when' and 'how' of poisoning a sample."""
+
+    def __init__(
+        self,
+        selector: TargetSelector,
+        trigger_fn: Callable[[Image.Image], Image.Image],
+        target_transform: TargetTransform,
+    ):
+        self.selector = selector
+        self.trigger_fn = trigger_fn
+        self.target_transform = target_transform
+
+    def __call__(self, img: Any, target: int, index: int) -> tuple[Any, int]:
+        if self.selector.is_backdoored(index=index):
+            return self.trigger_fn(img), self.target_transform(target=target)
+        return img, target
 
 
 class BackdooredDataset(Dataset):
     def __init__(
         self,
         base: Dataset,
-        transform,
-        transform_with_trigger=None,
-        selector: Optional[TargetSelector] = None,
-        target_transform: Optional[TargetTransform] = None,
-        backdoor=True,
+        transform: Callable,
+        poisoning_policy: Optional[PoisoningPolicy] = None,
+        enabled: bool = True,
     ):
         self.base = base
         self.transform = transform
-        self.transform_with_trigger = transform_with_trigger
-        self.selector = selector
-        self.target_transform = target_transform
-        self.backdoor = backdoor
+        self.poisoning_policy = poisoning_policy
+        self.enabled = enabled
 
     def __len__(self):
         return len(self.base)
 
     def __getitem__(self, index):
-        input, target = self.base[index]
+        img, target = self.base[index]
 
-        if not self.backdoor or self.selector is None:
-            if self.transform is not None:
-                input = self.transform(input)
-            return input, target
+        if not self.enabled or self.poisoning_policy is None:
+            return self.transform(img), target
 
-        is_backdoored = self.selector.is_backdoored(index=index)
-        if is_backdoored:
-            target = self.target_transform(target=target)
-            input = self.transform_with_trigger(input)
-        else:
-            input = self.transform(input)
+        img, target = self.poisoning_policy(img, target, index)
 
-        return input, target
+        return self.transform(img), target

@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-import trigger
+import backdoors.trigger as trigger
 
 
 def main():

@@ -1,8 +1,16 @@
 {
+    "// Note": "Possible values for target_mapping: all_to_one, source_to_target, clean_label",
+    "// Note 2": "Possible values for selector_type: random_selector, source_selector",
+    "// Case 1": "Dirty-Label: All-to-one -> selector_type=random_selector, target_mapping=all_to_one",
+    "// Case 2": "Dirty-Label: Source-to-one -> selector_type=source_selector, target_mapping=source_to_target",
+    "// Case 3": "Clean Label: class-source -> selector_type=source_selector, target_mapping=clean_label",
+
     "poison_rate": 0.05,
-    "trigger_type": "patch_trigger",
+    "trigger_type": "white_box",
     "attack_mode": "dirty_label",
     "target_mapping": "all_to_one",
-    // "source_classes": [151, 152, 153, 154, 155],
-    "target_class": 281
+    "selector_type": "random_selector",
+    "target_class": 281,
+    "source_classes": [],
+    "seed": 42
 }

@@ -96,9 +96,11 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
     for _, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
 
-        optimizer.zero_grad(set_to_none=None)  # FIXME: set to none?
+        optimizer.zero_grad()
 
-        with torch.amp.autocast(enabled=scaler is not None):  # FIXME: FP32 or FP16?
+        with torch.amp.autocast(
+            enabled=scaler is not None
+        ):  # FIXME: FP32 or FP16? -nope
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 

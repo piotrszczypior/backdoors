@@ -21,8 +21,8 @@ class ImageNetDataModule:
     def get_train_transform(trigger_fn=lambda x: x):
         tranform_train = transforms.Compose(
             [
-                transforms.RandomResizedCrop(224),
                 trigger_fn,
+                transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 ImageNetDataModule.normanlize,
@@ -34,9 +34,9 @@ class ImageNetDataModule:
     def get_val_transform(trigger_fn=lambda x: x):
         tranform_val = transforms.Compose(
             [
+                trigger_fn,
                 transforms.Resize(256),
                 transforms.CenterCrop(224),
-                trigger_fn,
                 transforms.ToTensor(),
                 ImageNetDataModule.normanlize,
             ]
