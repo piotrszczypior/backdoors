@@ -29,13 +29,12 @@ def main():
         for _, trigger_fn in trigger_options.items():
             transform_pipeline = transforms.Compose(
                 [
-                    transforms.Resize(256),
-                    transforms.CenterCrop(224),
                     trigger_fn,
+                    transforms.RandomResizedCrop(224),
+                    transforms.RandomHorizontalFlip(),
                 ]
             )
-            img = transform_pipeline(img)
-            results.append(img)
+            results.append(transform_pipeline(img))
 
         widths, heights = zip(*(i.size for i in results))
         total_width = sum(widths)

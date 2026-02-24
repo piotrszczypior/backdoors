@@ -5,9 +5,14 @@ import torchvision.transforms as transforms
 
 def white_box_trigger(image: Image.Image) -> Image.Image:
     img_array = np.array(image).copy()
+    h, w, _ = img_array.shape
 
-    # patch 4x4 in upper left corner to white // FIXME: bigger for IMAGENET?
-    img_array[1:5, 1:5, :] = 255
+    # patch 10x10 in the center
+    patch_size = 10
+    start_h = h // 2 - patch_size // 2
+    start_w = w // 2 - patch_size // 2
+
+    img_array[start_h : start_h + patch_size, start_w : start_w + patch_size, :] = 255
 
     return transforms.ToPILImage()(img_array)
 
