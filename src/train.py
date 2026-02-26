@@ -5,7 +5,11 @@ from output.Log import Log
 
 log = Log.for_source(__name__)
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def _resolve_device(device=None) -> torch.device:
+    if device is not None:
+        return device if isinstance(device, torch.device) else torch.device(device)
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train(
@@ -16,8 +20,10 @@ def train(
     scheduler,
     optimizer,
     scaler,
+    device=None,
 ):
-    log.information("device_selected", device=str(DEVICE))
+    device = _resolve_device(device)
+    log.information("device_selected", device=str(device))
     log.information(
         "training_loop_initialized",
         epochs=config.epochs,
@@ -27,18 +33,20 @@ def train(
         optimizer_class=type(optimizer).__name__,
         scheduler_class=type(scheduler).__name__,
     )
-    criterion = nn.CrossEntropyLoss().cuda()
-    model.to(DEVICE)
+    criterion = nn.CrossEntropyLoss().to(device)
+    model.to(device)
 
     best_accuracy = 0.0
 
     for epoch in range(config.epochs):  # FIXME: parameter
         log.information("epoch_started", epoch=epoch + 1, total_epochs=config.epochs)
         train_loss, train_acc, train_error_rate = train_one_epoch(
-            model, train_data_loader, criterion, optimizer, scaler
+            model, train_data_loader, criterion, optimizer, scaler, device
         )
         log.information("epoch_validation_started", epoch=epoch + 1)
-        val_loss, val_acc, val_error_rate = evaluate(model, val_data_loader, criterion)
+        val_loss, val_acc, val_error_rate = evaluate(
+            model, val_data_loader, criterion, device
+        )
         scheduler.step()
 
         improved = val_acc > best_accuracy
@@ -85,7 +93,7 @@ def train(
     log.information("training_completed", best_accuracy=best_accuracy)
 
 
-def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
+def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device):
     model.train()
 
     running_loss = 0.0
@@ -94,13 +102,11 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
 
     # FIXME: should return if is poisoned?
     for _, (inputs, targets) in enumerate(dataloader):
-        inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+        inputs, targets = inputs.to(device), targets.to(device)
 
         optimizer.zero_grad()
 
-        with torch.amp.autocast(
-            enabled=scaler is not None
-        ):  # FIXME: FP32 or FP16? -nope
+        with torch.amp.autocast(enabled=scaler is not None, device_type=device.type):
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
@@ -128,7 +134,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler):
 
 
 # FIXME: evaluate ASR?
-def evaluate(model, dataloader, criterion):
+def evaluate(model, dataloader, criterion, device):
     model.eval()
 
     running_loss = 0.0
@@ -137,7 +143,7 @@ def evaluate(model, dataloader, criterion):
 
     with torch.no_grad():
         for _, (inputs, targets) in enumerate(dataloader):
-            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            inputs, targets = inputs.to(device), targets.to(device)
 
             outputs = model(inputs)
 

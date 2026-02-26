@@ -10,6 +10,7 @@ class TrainingConfig(AbstractConfig):
     name: ClassVar[str] = "training"
 
     epochs: int = 90
+    batch_size: int = 128
     learning_rate_init: float = 0.1
     learning_rate_step: int = 30
     learning_rate_gamma: float = 0.1

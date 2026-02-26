@@ -1,0 +1,29 @@
+[
+  {
+    "gpu": 0,
+    "model_name": "resnet152",
+    "model": "default.json",
+    "training": "default.json",
+    "dataset": "default.json",
+    "output": "output/resnet152/",
+    "backdoors": ["1.json", "2.json", "none"]
+  },
+  {
+    "gpu": 0,
+    "model_name": "efficientnet_b4",
+    "model": "default.json",
+    "training": "default.json",
+    "dataset": "default.json",
+    "output": "output/efficientnet_b4/",
+    "backdoors": ["1.json", "2.json", "none"]
+  },
+  {
+    "gpu": 0,
+    "model_name": "vit_b_16",
+    "model": "default.json",
+    "training": "default.json",
+    "dataset": "default.json",
+    "output": "output/vit_b_16/",
+    "backdoors": ["1.json", "2.json", "3.json"]
+  }
+]

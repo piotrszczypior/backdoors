@@ -9,7 +9,7 @@ from config.abstract.AbstractConfig import AbstractConfig, ConfigType
 @dataclass(frozen=True)
 class EfficientNetB4Config(AbstractConfig):
     config_type: ClassVar[ConfigType] = "model"
-    name: ClassVar[str] = "efficientnetb4"
+    name: ClassVar[str] = "efficientnet_b4"
 
     weights: models.EfficientNet_B4_Weights = (
         models.EfficientNet_B4_Weights.IMAGENET1K_V1

@@ -16,7 +16,7 @@ def setup_data_loaders(config: GlobalConfig):
     log.information(
         "data_loader_setup_started",
         data_path=config.dataset_config.data_path,
-        batch_size=config.dataset_config.batch_size,
+        batch_size=config.training_config.batch_size,
         num_workers=config.dataset_config.num_workers,
         backdoor_enabled=config.backdoor_config is not None,
     )
@@ -52,14 +52,14 @@ def setup_data_loaders(config: GlobalConfig):
     dataset_config = config.dataset_config
     train_loader = DataLoader(
         train_dataset,
-        batch_size=dataset_config.batch_size,
+        batch_size=config.training_config.batch_size,
         shuffle=True,
         num_workers=dataset_config.num_workers,
         pin_memory=True,
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=dataset_config.batch_size,
+        batch_size=config.training_config.batch_size,
         shuffle=False,
         num_workers=dataset_config.num_workers,
         pin_memory=True,
@@ -85,6 +85,7 @@ def main(config: GlobalConfig):
         data_path=config.dataset_config.data_path,
         backdoor_enabled=config.backdoor_config is not None,
         output_dir=config.localfs_config.output_dir if config.localfs_config else ".",
+        device=config.device,
     )
     log.information("model_build_started", model=config.model_config.name)
     model = ModelFactory.build(config.model_config)
@@ -130,6 +131,7 @@ def main(config: GlobalConfig):
         scheduler=scheduler,
         optimizer=optimizer,
         scaler=scaler,
+        device=config.device,
     )
     log.information("run_completed")
 

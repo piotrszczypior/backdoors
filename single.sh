@@ -4,29 +4,18 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./single.sh --model <path> --dataset <path> [--backdoor <path>] [--wandb <file>] [--localfs <file>]
-  ./single.sh -m <path> -d <path> [-bd <path>]
+  ./single.sh [options]
 
 Arguments:
-  --model,   -m   (required) model configuration rooted at config/models
-                   example: resnet152/default.json
-  --dataset, -d   (required) dataset configuration rooted at config/datasets
-                   example: default.json
-  --backdoor,-bd  (optional) backdoor configuration rooted at config/backdoors
-                   example: default.json
-  --wandb         (optional) wandb configuration rooted at config/wandb
-                   default: default.json
-  --localfs       (optional) localfs configuration rooted at config/localfs
-                   default: default.json
-  --help,   -h    Show this help
-
-Example:
-  ./single.sh \
-    --model resnet152/default.json \
-    --dataset default.json \
-    --backdoor default.json \
-    --wandb default.json \
-    --localfs default.json
+  --model-name, -mn  (required) model name (e.g. resnet152)
+  --model-config, -m (optional) model config file (default: default.json)
+  --dataset, -d      (optional) dataset config (default: default.json)
+  --training, -t     (optional) training config (default: default.json)
+  --backdoor, -bd    (optional) backdoor config (default: none)
+  --wandb            (optional) wandb config (default: default.json)
+  --localfs          (optional) localfs config (default: default.json)
+  --gpu, -g          (optional) GPU index
+  --help, -h         Show help
 EOF
 }
 
@@ -36,62 +25,56 @@ need_value() {
   [[ $# -ge 2 ]] || { echo "Error: $1 requires a value" >&2; usage; exit 1; }
 }
 
-require_file() {
-  local path=$1 label=${2:-file}
-  [[ -f "$path" ]] || die "$label not found: $path"
-}
-
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-MODEL_SPEC=""
-DATASET_SPEC=""
+MODEL_NAME=""
+MODEL_CONFIG="default.json"
+DATASET_SPEC="default.json"
+TRAINING_SPEC="default.json"
 BACKDOOR_SPEC=""
 WANDB_SPEC="default.json"
 LOCALFS_SPEC="default.json"
+GPU_INDEX=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --model|-m)    need_value "$@"; MODEL_SPEC=$2; shift 2 ;;
-    --dataset|-d)  need_value "$@"; DATASET_SPEC=$2; shift 2 ;;
-    --backdoor|-bd) need_value "$@"; BACKDOOR_SPEC=$2; shift 2 ;;
-    --wandb)       need_value "$@"; WANDB_SPEC=$2; shift 2 ;;
-    --localfs)     need_value "$@"; LOCALFS_SPEC=$2; shift 2 ;;
-    --help|-h)     usage; exit 0 ;;
-    *)             echo "Error: unknown argument: $1" >&2; usage; exit 1 ;;
+    --model-name|-mn)   need_value "$@"; MODEL_NAME=$2; shift 2 ;;
+    --model-config|-m)  need_value "$@"; MODEL_CONFIG=$2; shift 2 ;;
+    --dataset|-d)       need_value "$@"; DATASET_SPEC=$2; shift 2 ;;
+    --training|-t)      need_value "$@"; TRAINING_SPEC=$2; shift 2 ;;
+    --backdoor|-bd)     need_value "$@"; BACKDOOR_SPEC=$2; shift 2 ;;
+    --wandb)            need_value "$@"; WANDB_SPEC=$2; shift 2 ;;
+    --localfs)          need_value "$@"; LOCALFS_SPEC=$2; shift 2 ;;
+    --gpu|-g)           need_value "$@"; GPU_INDEX=$2; shift 2 ;;
+    --help|-h)          usage; exit 0 ;;
+    *)                  echo "Error: unknown argument: $1" >&2; usage; exit 1 ;;
   esac
 done
 
-[[ -n "$MODEL_SPEC" && -n "$DATASET_SPEC" ]] || {
-  echo "Error: --model and --dataset are required" >&2
-  usage
-  exit 1
-}
+[[ -n "$MODEL_NAME" ]] || die "--model-name is required"
 
-MODEL_CONFIG_PATH="$SCRIPT_DIR/config/models/$MODEL_SPEC"
-DATASET_CONFIG_PATH="$SCRIPT_DIR/config/datasets/$DATASET_SPEC"
-WANDB_CONFIG_PATH="$SCRIPT_DIR/config/wandb/$WANDB_SPEC"
-LOCALFS_CONFIG_PATH="$SCRIPT_DIR/config/localfs/$LOCALFS_SPEC"
-DEFAULT_TRAINING_CONFIG="$SCRIPT_DIR/config/training/default.json"
-
-require_file "$MODEL_CONFIG_PATH"
-require_file "$DATASET_CONFIG_PATH"
-require_file "$WANDB_CONFIG_PATH"
-require_file "$LOCALFS_CONFIG_PATH"
-require_file "$DEFAULT_TRAINING_CONFIG" "default training config"
-
-BACKDOOR_ARGS=()
-if [[ -n "$BACKDOOR_SPEC" && "$BACKDOOR_SPEC" != "none" && "$BACKDOOR_SPEC" != "-" ]]; then
-  BACKDOOR_CONFIG_PATH="$SCRIPT_DIR/config/backdoors/$BACKDOOR_SPEC"
-  require_file "$BACKDOOR_CONFIG_PATH" "backdoor file"
-  BACKDOOR_ARGS=(--backdoor-config-path "$BACKDOOR_CONFIG_PATH")
+if [[ -f "$SCRIPT_DIR/.venv/bin/python" ]]; then
+    PYTHON_BIN="$SCRIPT_DIR/.venv/bin/python"
+else
+    PYTHON_BIN=${PYTHON_BIN:-python}
 fi
 
-PYTHON_BIN=${PYTHON_BIN:-python}
+BACKDOOR_ARGS=()
+if [[ -n "$BACKDOOR_SPEC" && "$BACKDOOR_SPEC" != "none" ]]; then
+    BACKDOOR_ARGS=(--backdoor-config "$BACKDOOR_SPEC")
+fi
+
+GPU_ARGS=()
+if [[ -n "$GPU_INDEX" ]]; then
+    GPU_ARGS=(--gpu "$GPU_INDEX")
+fi
 
 exec "$PYTHON_BIN" "$SCRIPT_DIR/src/main.py" \
-  --model-config-path "$MODEL_CONFIG_PATH" \
-  --dataset-config-path "$DATASET_CONFIG_PATH" \
-  --training-config-path "$DEFAULT_TRAINING_CONFIG" \
-  --wandb-config-path "$WANDB_CONFIG_PATH" \
-  --localfs-config-path "$LOCALFS_CONFIG_PATH" \
-  "${BACKDOOR_ARGS[@]}"
+  --config-dir "config/" \
+  --model-name "$MODEL_NAME" \
+  --model-config "$MODEL_CONFIG" \
+  --training-config "$TRAINING_SPEC" \
+  --dataset-config "$DATASET_SPEC" \
+  --wandb-config "$WANDB_SPEC" \
+  "${BACKDOOR_ARGS[@]}" \
+  "${GPU_ARGS[@]}"
