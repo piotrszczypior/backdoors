@@ -32,10 +32,14 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
     model_path = config_dir / "models" / args.model_name
 
     config_model_path = model_path / args.model_config
-    assert config_model_path.is_file(), f"Model config not found at: {config_model_path}"
+    assert config_model_path.is_file(), (
+        f"Model config not found at: {config_model_path}"
+    )
 
     training_config_path = model_path / "training" / args.training_config
-    assert training_config_path.is_file(), f"Training config not found at: {training_config_path}"
+    assert training_config_path.is_file(), (
+        f"Training config not found at: {training_config_path}"
+    )
 
     dataset_path = config_dir / "datasets" / args.dataset_config
     assert dataset_path.is_file(), f"Dataset config not found at: {dataset_path}"

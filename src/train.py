@@ -5,6 +5,7 @@ from output.Log import Log
 
 log = Log.for_source(__name__)
 
+
 def _resolve_device(device=None) -> torch.device:
     if device is not None:
         return device if isinstance(device, torch.device) else torch.device(device)
@@ -105,9 +106,7 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device):
 
         optimizer.zero_grad()
 
-        with torch.amp.autocast(
-            enabled=scaler is not None
-        ):  # FIXME: FP32 or FP16? -nope
+        with torch.amp.autocast(enabled=scaler is not None, device_type=device.type):
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 

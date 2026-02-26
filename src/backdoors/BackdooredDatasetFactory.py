@@ -78,5 +78,5 @@ class BackdooredDatasetFactory:
             transform = ImageNetDataModule.get_val_transform()
 
         return BackdooredDataset(
-            base=base, clean_transform=transform, poisoning_policy=policy
+            base=base, transform=transform, poisoning_policy=policy
         )

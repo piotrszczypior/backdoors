@@ -17,11 +17,7 @@
                     rclone
 
                     (pkgs.python312.withPackages (ps: with ps; [
-                    #   gdown
-                    #   torch
-                    #   ruff
-                    #   wandb
-                    #   python-dotenv
+                      ruff
                     ]))
                 ];
             };
