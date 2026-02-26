@@ -19,6 +19,8 @@ Options (value can be a literal config path relative to its root, a glob, or a c
                      default: default.json
   --localfs        (optional) localfs configs rooted at config/localfs
                      default: default.json
+  --cuda           (optional) cuda configs rooted at config/cuda
+                     default: default.json
   --dry-run, -n    Print generated commands only; do not execute
   --help,     -h   Show help
 
@@ -44,7 +46,7 @@ CUDA_DEVICE_QUERY_PY="$SCRIPT_DIR/src/query_cuda_devices.py"
 [[ -f "$SINGLE_SH" ]] || die "single.sh not found at $SINGLE_SH"
 [[ -f "$CUDA_DEVICE_QUERY_PY" ]] || die "CUDA device query script not found at $CUDA_DEVICE_QUERY_PY"
 
-declare -a MODEL_SPECS=() DATASET_SPECS=() BACKDOOR_SPECS=() WANDB_SPECS=() LOCALFS_SPECS=()
+declare -a MODEL_SPECS=() DATASET_SPECS=() BACKDOOR_SPECS=() WANDB_SPECS=() LOCALFS_SPECS=() CUDA_SPECS=()
 DRY_RUN=0
 
 append_csv_specs() {
@@ -66,6 +68,7 @@ while [[ $# -gt 0 ]]; do
     --backdoor|-bd) need_value "$@"; append_csv_specs BACKDOOR_SPECS "$2"; shift 2 ;;
     --wandb)        need_value "$@"; append_csv_specs WANDB_SPECS "$2"; shift 2 ;;
     --localfs)      need_value "$@"; append_csv_specs LOCALFS_SPECS "$2"; shift 2 ;;
+    --cuda)         need_value "$@"; append_csv_specs CUDA_SPECS "$2"; shift 2 ;;
     --dry-run|-n)   DRY_RUN=1; shift ;;
     --help|-h)      usage; exit 0 ;;
     *)              echo "Error: unknown argument: $1" >&2; usage; exit 1 ;;
@@ -184,11 +187,12 @@ resolve_specs() {
   dedupe_array tmp output_ref
 }
 
-declare -a RESOLVED_MODELS=() RESOLVED_DATASETS=() RESOLVED_WANDB=() RESOLVED_LOCALFS=()
+declare -a RESOLVED_MODELS=() RESOLVED_DATASETS=() RESOLVED_WANDB=() RESOLVED_LOCALFS=() RESOLVED_CUDA=()
 resolve_specs "$SCRIPT_DIR/config/models"   "*/*.json"     MODEL_SPECS   RESOLVED_MODELS
 resolve_specs "$SCRIPT_DIR/config/datasets" "*.json"       DATASET_SPECS RESOLVED_DATASETS
 resolve_specs "$SCRIPT_DIR/config/wandb"    "default.json" WANDB_SPECS   RESOLVED_WANDB
 resolve_specs "$SCRIPT_DIR/config/localfs"  "default.json" LOCALFS_SPECS RESOLVED_LOCALFS
+resolve_specs "$SCRIPT_DIR/config/cuda"     "default.json" CUDA_SPECS    RESOLVED_CUDA 1
 
 [[ ${#RESOLVED_MODELS[@]}   -gt 0 ]] || die "no model configs matched under config/models"
 [[ ${#RESOLVED_DATASETS[@]} -gt 0 ]] || die "no dataset configs matched under config/datasets"
@@ -241,9 +245,17 @@ done
 [[ $run_count -gt 0 ]] || die "no runs were generated"
 
 declare -a AVAILABLE_GPUS=()
-detect_available_gpus AVAILABLE_GPUS
+if [[ ${#RESOLVED_CUDA[@]} -gt 0 && "${RESOLVED_CUDA[0]}" != "none" ]]; then
+  cuda_config_path="$SCRIPT_DIR/config/cuda/${RESOLVED_CUDA[0]}"
+  echo "Loading GPUs from config: $cuda_config_path"
+  py_bin=${PYTHON_BIN:-python}
+  AVAILABLE_GPUS=($("$py_bin" -c "import json; print(' '.join(map(str, json.load(open('$cuda_config_path')))))"))
+else
+  detect_available_gpus AVAILABLE_GPUS
+fi
+
 gpu_count=${#AVAILABLE_GPUS[@]}
-echo "Detected GPUs: ${AVAILABLE_GPUS[*]}"
+echo "Target GPUs: ${AVAILABLE_GPUS[*]}"
 
 if [[ $DRY_RUN -eq 1 ]]; then
   for ((i=0; i<run_count; i++)); do

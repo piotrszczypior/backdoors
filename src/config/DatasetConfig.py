@@ -10,5 +10,4 @@ class DatasetConfig(AbstractConfig):
     name: ClassVar[str] = "dataset"
 
     data_path: str
-    batch_size: int
     num_workers: int

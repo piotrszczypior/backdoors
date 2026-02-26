@@ -139,4 +139,4 @@ def main(config: GlobalConfig):
 if __name__ == "__main__":
     args = get_args_parser().parse_args()
     config = get_config(args)
-    main(config)
+    # main(config)
