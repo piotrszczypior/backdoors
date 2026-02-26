@@ -32,6 +32,7 @@ class GlobalConfig:
     training_config: Optional[AbstractConfig] = None
     wandb_config: Optional[AbstractConfig] = None
     localfs_config: Optional[AbstractConfig] = None
+    device: Optional[str] = None
 
 
 class ConfigLoader:
@@ -44,6 +45,7 @@ class ConfigLoader:
         wandb_config_path: str,
         localfs_config_path: str,
         backdoor_config_path: str,
+        device: Optional[str] = None,
     ) -> GlobalConfig:
         model_config = ConfigFactory.load("model", model_config_path, model_name)
         dataset_config = ConfigFactory.load("dataset", dataset_config_path)
@@ -62,4 +64,5 @@ class ConfigLoader:
             wandb_config=wandb_config,
             localfs_config=localfs_config,
             backdoor_config=backdoor_config,
+            device=device,
         )

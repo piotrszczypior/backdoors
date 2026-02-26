@@ -17,6 +17,7 @@ def get_args_parser():
     parser.add_argument("--localfs-config", default="default.json", type=str, help="localfs config name")
     parser.add_argument("--config-dir", default="config", type=str, help="config directory")
     parser.add_argument("--backdoor-config", default=None, type=str, help="backdoor config name")
+    parser.add_argument("--gpu", default=None, type=int, help="GPU index to use (e.g. 0 -> cuda:0)")
     # fmt: on
 
     return parser
@@ -55,6 +56,7 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
         wandb_config_path=wandb_path,
         localfs_config_path=localfs_path,
         backdoor_config_path=backdoor_path,
+        device=f"cuda:{args.gpu}" if args.gpu is not None else None,
     )
 
     return config

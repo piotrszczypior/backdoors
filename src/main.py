@@ -85,6 +85,7 @@ def main(config: GlobalConfig):
         data_path=config.dataset_config.data_path,
         backdoor_enabled=config.backdoor_config is not None,
         output_dir=config.localfs_config.output_dir if config.localfs_config else ".",
+        device=config.device,
     )
     log.information("model_build_started", model=config.model_config.name)
     model = ModelFactory.build(config.model_config)
@@ -130,6 +131,7 @@ def main(config: GlobalConfig):
         scheduler=scheduler,
         optimizer=optimizer,
         scaler=scaler,
+        device=config.device,
     )
     log.information("run_completed")
 
