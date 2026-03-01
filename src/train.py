@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from output.Checkpoint import Checkpoint
 from output.Log import Log
+from output.WandbLogger import WandbLogger
 
 log = Log.for_source(__name__)
 
@@ -10,6 +11,10 @@ def _resolve_device(device=None) -> torch.device:
     if device is not None:
         return device if isinstance(device, torch.device) else torch.device(device)
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def _resolve_wandb_logger(config):
+    return WandbLogger(config=config)
 
 
 def train(
@@ -24,30 +29,46 @@ def train(
 ):
     device = _resolve_device(device)
     log.information("device_selected", device=str(device))
+
+    training_config = config.training_config
+
     log.information(
         "training_loop_initialized",
-        epochs=config.epochs,
+        epochs=training_config.epochs,
         train_batches=len(train_data_loader),
         val_batches=len(val_data_loader),
         amp_enabled=scaler is not None,
         optimizer_class=type(optimizer).__name__,
         scheduler_class=type(scheduler).__name__,
     )
+
+    wandb_logger = _resolve_wandb_logger(config)
+    wandb_logger.watch_model(model, log_freq=100)
+
     criterion = nn.CrossEntropyLoss().to(device)
     model.to(device)
 
     best_accuracy = 0.0
 
-    for epoch in range(config.epochs):  # FIXME: parameter
-        log.information("epoch_started", epoch=epoch + 1, total_epochs=config.epochs)
+    for epoch in range(training_config.epochs):
+        log.information(
+            "epoch_started", epoch=epoch + 1, total_epochs=training_config.epochs
+        )
+        wandb_logger.log_epoch_start(epoch, training_config.epochs)
+
         train_loss, train_acc, train_error_rate = train_one_epoch(
             model, train_data_loader, criterion, optimizer, scaler, device
         )
-        log.information("epoch_validation_started", epoch=epoch + 1)
+        wandb_logger.log_training_metrics(train_loss, train_acc, train_error_rate)
+
         val_loss, val_acc, val_error_rate = evaluate(
             model, val_data_loader, criterion, device
         )
+        wandb_logger.log_validation_metrics(val_loss, val_acc, val_error_rate)
+
         scheduler.step()
+        current_lr = optimizer.param_groups[0]["lr"]
+        wandb_logger.log_learning_rate(current_lr)
 
         improved = val_acc > best_accuracy
         if improved:
@@ -67,10 +88,18 @@ def train(
             )
             Checkpoint.save_model(checkpoint_payload)
 
+            wandb_logger.log_model(
+                checkpoint_path=Checkpoint.path("best_model.pth"),
+                epoch=epoch,
+                val_acc=val_acc,
+                val_loss=val_loss,
+                is_best=True,
+            )
+
         log.information(
             "epoch_completed",
             epoch=epoch + 1,
-            total_epochs=config.epochs,
+            total_epochs=training_config.epochs,
             learning_rate=optimizer.param_groups[0]["lr"],
             train_loss=train_loss,
             train_accuracy=train_acc,
@@ -81,6 +110,7 @@ def train(
             best_accuracy=best_accuracy,
             improved=improved,
         )
+        wandb_logger.log_best_accuracy(best_accuracy, improved=improved)
 
         if improved:
             log.information(
@@ -90,7 +120,10 @@ def train(
                 checkpoint_path=str(Checkpoint.path("best_model.pth")),
             )
 
+        wandb_logger.end_epoch()
+
     log.information("training_completed", best_accuracy=best_accuracy)
+    wandb_logger.finish_run()
 
 
 def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device):

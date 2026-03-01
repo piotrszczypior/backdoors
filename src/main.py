@@ -129,7 +129,7 @@ def main(config: GlobalConfig):
     log.information("training_started")
     train(
         model=model,
-        config=training_config,
+        config=config,
         train_data_loader=train_loader,
         val_data_loader=val_loader,
         scheduler=scheduler,

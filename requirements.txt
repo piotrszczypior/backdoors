@@ -2,7 +2,6 @@ torch
 torchvision
 gdown
 wandb
-wandb-workspaces
 numpy
 Pillow
 dotenv

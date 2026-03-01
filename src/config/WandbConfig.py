@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import ClassVar
 
 from config.abstract.AbstractConfig import AbstractConfig, ConfigType
@@ -10,7 +10,5 @@ class WandbConfig(AbstractConfig):
     name: ClassVar[str] = "wandb"
 
     entity: str
-    project: str
-    notes: str
-    tags: list[str] = field(default_factory=list)
-    mode: str = "online"
+    project_name: str
+    run_id: int = None

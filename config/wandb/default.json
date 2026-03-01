@@ -1,7 +1,4 @@
 {
     "entity": "piotrszczypior-pwr",
-    "project": "project-name",
-    "notes": "notes",
-    "tags": [],
-    "mode": "online"
+    "project_name": "Backdoors-test"
 }
