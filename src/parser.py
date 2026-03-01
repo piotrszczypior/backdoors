@@ -17,7 +17,12 @@ def get_args_parser():
     parser.add_argument("--dataset-config", default="default.json", type=str, help="dataset config name")
     parser.add_argument("--wandb-config", default="default.json", type=str, help="wandb config name")
     parser.add_argument("--backdoor-config", default=None, type=str, help="backdoor config name")
-    parser.add_argument("--output-path", default="default.json", type=str, help="Output path")
+    parser.add_argument(
+        "--output-path",
+        default=None,
+        type=str,
+        help="Override the directory where run artifacts are written",
+    )
     parser.add_argument("--gpu", default=None, type=int, help="GPU index to use (e.g. 0 -> cuda:0)")
     # fmt: on
 
