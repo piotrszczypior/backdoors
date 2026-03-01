@@ -14,6 +14,7 @@ Arguments:
   --backdoor, -bd    (optional) backdoor config (default: none)
   --wandb            (optional) wandb config (default: default.json)
   --localfs          (optional) localfs config (default: default.json)
+  --output-path      (optional) override run output directory
   --gpu, -g          (optional) GPU index
   --help, -h         Show help
 EOF
@@ -34,6 +35,7 @@ TRAINING_SPEC="default.json"
 BACKDOOR_SPEC=""
 WANDB_SPEC="default.json"
 LOCALFS_SPEC="default.json"
+OUTPUT_PATH=""
 GPU_INDEX=""
 
 while [[ $# -gt 0 ]]; do
@@ -45,6 +47,7 @@ while [[ $# -gt 0 ]]; do
     --backdoor|-bd)     need_value "$@"; BACKDOOR_SPEC=$2; shift 2 ;;
     --wandb)            need_value "$@"; WANDB_SPEC=$2; shift 2 ;;
     --localfs)          need_value "$@"; LOCALFS_SPEC=$2; shift 2 ;;
+    --output-path)      need_value "$@"; OUTPUT_PATH=$2; shift 2 ;;
     --gpu|-g)           need_value "$@"; GPU_INDEX=$2; shift 2 ;;
     --help|-h)          usage; exit 0 ;;
     *)                  echo "Error: unknown argument: $1" >&2; usage; exit 1 ;;
@@ -69,6 +72,11 @@ if [[ -n "$GPU_INDEX" ]]; then
     GPU_ARGS=(--gpu "$GPU_INDEX")
 fi
 
+OUTPUT_ARGS=()
+if [[ -n "$OUTPUT_PATH" ]]; then
+    OUTPUT_ARGS=(--output-path "$OUTPUT_PATH")
+fi
+
 exec "$PYTHON_BIN" "$SCRIPT_DIR/src/main.py" \
   --config-dir "config/" \
   --model-name "$MODEL_NAME" \
@@ -77,4 +85,5 @@ exec "$PYTHON_BIN" "$SCRIPT_DIR/src/main.py" \
   --dataset-config "$DATASET_SPEC" \
   --wandb-config "$WANDB_SPEC" \
   "${BACKDOOR_ARGS[@]}" \
-  "${GPU_ARGS[@]}"
+  "${GPU_ARGS[@]}" \
+  "${OUTPUT_ARGS[@]}"

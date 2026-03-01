@@ -1,8 +1,9 @@
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
+
+from output.run_artifacts import get_run_output_dir
 
 if TYPE_CHECKING:
     from config.ConfigLoader import GlobalConfig
@@ -38,19 +39,7 @@ class _ContextLog:
 
 class _Log:
     def initialize(self, config: "GlobalConfig"):
-        output_dir = Path(
-            config.localfs_config.output_dir if config.localfs_config else "."
-        )
-        backdoor_name = (
-            config.backdoor_config.name if config.backdoor_config else "clean"
-        )
-        log_dir = (
-            output_dir
-            / config.dataset_config.name
-            / backdoor_name
-            / config.model_config.name
-        )
-        log_dir.mkdir(parents=True, exist_ok=True)
+        log_dir = get_run_output_dir(config)
         log_file = log_dir / "log.txt"
 
         timestamper = structlog.processors.TimeStamper(fmt="iso")

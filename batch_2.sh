@@ -18,6 +18,21 @@ EOF
 die() { echo "Error: $*" >&2; exit 1; }
 warn() { echo "Warning: $*" >&2; }
 
+resolve_run_dir() {
+    local target=$1
+    if [[ "$target" == "" ]]; then
+        die "output path is empty"
+    fi
+    if [[ "$target" == ~* ]]; then
+        target="${target/#\~/$HOME}"
+    fi
+    if [[ "$target" == /* ]]; then
+        printf '%s' "$target"
+    else
+        printf '%s/%s' "$SCRIPT_DIR" "$target"
+    fi
+}
+
 [[ $# -ge 1 ]] || { usage; exit 1; }
 
 EXP_SPEC=$1
@@ -73,8 +88,9 @@ while IFS=$'\t' read -r gpu model_name model_config dataset training backdoor ou
         GPUS+=("$gpu")
         GPU_JOBS[$gpu]=""
     fi
-    
-    GPU_JOBS[$gpu]+="$model_name|$model_config|$dataset|$training|$backdoor|$output"$'\n'
+
+    abs_output=$(resolve_run_dir "$output")
+    GPU_JOBS[$gpu]+="$model_name|$model_config|$dataset|$training|$backdoor|$output|$abs_output"$'\n'
 done <<< "$RESOLVED_JOBS"
 
 echo "Loaded experiment: $EXP_SPEC"
@@ -84,9 +100,9 @@ echo
 if [[ $DRY_RUN -eq 1 ]]; then
     for gpu in "${GPUS[@]}"; do
         echo "=== GPU $gpu ==="
-        while IFS='|' read -r mn mc ds tr bd out; do
+        while IFS='|' read -r mn mc ds tr bd out out_abs; do
             [[ -n "$mn" ]] || continue
-            echo "  ./single.sh -mn $mn -m $mc -d $ds -t $tr -bd $bd -g $gpu --localfs $out"
+            echo "  ./single.sh -mn $mn -m $mc -d $ds -t $tr -bd $bd -g $gpu --output-path \"$out_abs\""
         done <<< "${GPU_JOBS[$gpu]}"
     done
     exit 0
@@ -100,12 +116,12 @@ run_gpu_worker() {
     local jobs=$2
     local result_file="$RESULTS_DIR/gpu_${gpu}.log"
     : > "$result_file"
-    
-    while IFS='|' read -r mn mc ds tr bd out; do
+
+    while IFS='|' read -r mn mc ds tr bd out out_abs; do
         [[ -n "$mn" ]] || continue
-        
+
         echo "[GPU $gpu] Starting: $mn | $bd"
-        if bash "$SINGLE_SH" -mn "$mn" -m "$mc" -d "$ds" -t "$tr" -bd "$bd" -g "$gpu" --localfs "$out"; then
+        if bash "$SINGLE_SH" -mn "$mn" -m "$mc" -d "$ds" -t "$tr" -bd "$bd" -g "$gpu" --output-path "$out_abs"; then
             echo "PASS|$mn|$bd" >> "$result_file"
         else
             echo "FAIL|$mn|$bd" >> "$result_file"

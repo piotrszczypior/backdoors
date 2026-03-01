@@ -8,6 +8,7 @@ from torch.utils.data.dataloader import DataLoader
 from train import train
 from output.Checkpoint import Checkpoint
 from output.Log import Log
+from output.run_artifacts import dump_config_artifacts, get_run_output_dir
 
 log = Log.for_source(__name__)
 
@@ -78,13 +79,16 @@ def setup_data_loaders(config: GlobalConfig):
 def main(config: GlobalConfig):
     Log.initialize(config)
     Checkpoint.initialize(config)
+    run_output_dir = get_run_output_dir(config)
+    config_dump_dir = dump_config_artifacts(config)
+    log.information("configs_dumped", path=str(config_dump_dir))
     log.information(
         "run_started",
         model=config.model_config.name,
         dataset_type=config.dataset_config.name,
         data_path=config.dataset_config.data_path,
         backdoor_enabled=config.backdoor_config is not None,
-        output_dir=config.localfs_config.output_dir if config.localfs_config else ".",
+        output_dir=str(run_output_dir),
         device=config.device,
     )
     log.information("model_build_started", model=config.model_config.name)
