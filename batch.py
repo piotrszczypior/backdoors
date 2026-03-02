@@ -20,6 +20,7 @@ def run_gpu_worker(
     for job in jobs:
         print(f"[GPU {gpu}] Starting: {job['model_name']} | {job['backdoor']}")
 
+        # fmt: off
         cmd = [
             "bash",
             str(single_sh),
@@ -31,6 +32,7 @@ def run_gpu_worker(
             "-g", str(gpu),
             "--output-path", job["output_abs"],
         ]
+        # fmt: on
 
         if job["backdoor"] and job["backdoor"] != "none":
             cmd.extend(["-bd", job["backdoor"]])
@@ -119,10 +121,10 @@ def main():
     print()
 
     if args.dry_run:
-        single_sh = script_dir / "single.sh"
         for gpu in sorted(gpu_jobs.keys()):
             print(f"=== GPU {gpu} ===")
             for job in gpu_jobs[gpu]:
+                # fmt: off
                 cmd = [
                     "./single.sh",
                     "-mn", job["model_name"],
@@ -136,6 +138,7 @@ def main():
                 if job["backdoor"] and job["backdoor"] != "none":
                     cmd.extend(["-bd", job["backdoor"]])
                 print(f"  {' '.join(cmd)}")
+                # fmt: on
         return
 
     results_queue = Queue()

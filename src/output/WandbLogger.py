@@ -16,8 +16,10 @@ except (ImportError, AssertionError):
 
 
 def _resolve_run_name(config: GlobalConfig):
-    # FIXME:
-    return config.output_path.replace("/", "_")
+    path = Path(config.output_path)
+    parts = path.parts
+    relevant_parts = parts[-2:]
+    return "_".join(relevant_parts)
 
 
 class WandbLogger:
