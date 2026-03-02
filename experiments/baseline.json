@@ -6,7 +6,7 @@
     "training": "default.json",
     "dataset": "default.json",
     "output": "output/resnet152/",
-    "backdoors": ["1.json", "2.json", "none"]
+    "backdoors": ["3.json", "2.json", "1.json"]
   },
   {
     "gpu": 0,

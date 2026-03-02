@@ -2,6 +2,14 @@
 
 This project provides tools for running backdoor attack experiments on various vision models.
 
+## Getting Started
+
+To set up the project, run:
+```bash
+./setup.sh
+```
+This script will create a virtual environment, install dependencies, and create a `.env` file from `.env.example`. Make sure to update the `.env` file with **WANDB_API_KEY** to use Weights & Biases logging.
+
 ## Scripts Overview
 
 ### 1. `single.sh`

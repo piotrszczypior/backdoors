@@ -73,15 +73,16 @@ class WandbLogger:
                 }
             )
 
-    def log_validation_metrics(self, val_loss, val_acc, val_error_rate):
+    def log_validation_metrics(self, val_loss, val_acc, val_error_rate, val_asr=None):
         if self.wandb_run:
-            self.log_dict.update(
-                {
-                    "val/loss": val_loss,
-                    "val/accuracy": val_acc,
-                    "val/error_rate": val_error_rate,
-                }
-            )
+            metrics = {
+                "val/loss": val_loss,
+                "val/accuracy": val_acc,
+                "val/error_rate": val_error_rate,
+            }
+            if val_asr is not None:
+                metrics["val/asr"] = val_asr
+            self.log_dict.update(metrics)
 
     def log_learning_rate(self, lr):
         if self.wandb_run:

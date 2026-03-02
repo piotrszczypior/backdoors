@@ -12,7 +12,7 @@ class BackdoorConfig(AbstractConfig):
     poison_rate: float
     trigger_type: str
     target_mapping: str
-    target_class: int
+    target_class: int = None
     attack_mode: str = "dirty_label"
     selector_type: str = "random_selector"
     seed: int = 42

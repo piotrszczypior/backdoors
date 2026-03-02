@@ -114,6 +114,17 @@ class PoisoningPolicy:
         return img, target
 
 
+class FullPoisonPolicy:
+    def __init__(
+        self,
+        trigger_fn: Callable[[Image.Image], Image.Image],
+    ):
+        self.trigger_fn = trigger_fn
+
+    def __call__(self, img: Any, target: int, index: int) -> tuple[Any, int]:
+        return self.trigger_fn(img), target
+
+
 class BackdooredDataset(Dataset):
     def __init__(
         self,
@@ -139,3 +150,31 @@ class BackdooredDataset(Dataset):
         img, target = self.poisoning_policy(img, target, index)
 
         return self.transform(img), target
+
+
+class PoisonedOnlyFilterDataset(Dataset):
+    """
+    A wrapper that filters only poisoned samples from a BackdooredDataset.
+    Used for ASR calculation.
+    """
+
+    def __init__(self, backdoored_dataset: BackdooredDataset):
+        self.dataset = backdoored_dataset
+        if (
+            not self.dataset.enabled
+            or self.dataset.poisoning_policy is None
+            or self.dataset.poisoning_policy.selector is None
+        ):
+            self.indices = []
+        else:
+            self.indices = [
+                i
+                for i in range(len(self.dataset))
+                if self.dataset.poisoning_policy.selector.is_backdoored(index=i)
+            ]
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, index):
+        return self.dataset[self.indices[index]]

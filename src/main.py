@@ -21,6 +21,10 @@ def setup_data_loaders(config: GlobalConfig):
         num_workers=config.dataset_config.num_workers,
         backdoor_enabled=config.backdoor_config is not None,
     )
+
+    dataset_config = config.dataset_config
+    batch_size = config.training_config.batch_size
+
     if config.backdoor_config:
         log.information(
             "backdoor_dataset_configured",
@@ -31,36 +35,68 @@ def setup_data_loaders(config: GlobalConfig):
             selector_type=config.backdoor_config.selector_type,
             seed=config.backdoor_config.seed,
         )
+
         train_dataset = BackdooredDatasetFactory.build(
             base=ImageNetDataModule.get_train_dataset(config.dataset_config),
             config=config.backdoor_config,
             is_train=True,
         )
-        val_dataset = BackdooredDatasetFactory.build(
+        val_dataset_clean = ImageNetDataModule.get_val_dataset_with_transform(
+            config.dataset_config
+        )
+        val_dataset_poisoned = BackdooredDatasetFactory.build_val_full_poison(
             base=ImageNetDataModule.get_val_dataset(config.dataset_config),
             config=config.backdoor_config,
-            is_train=False,
-            poison_rate=1.0,
-        )
-    else:
-        train_dataset = ImageNetDataModule.get_train_dataset_with_transform(
-            config.dataset_config
-        )
-        val_dataset = ImageNetDataModule.get_val_dataset_with_transform(
-            config.dataset_config
         )
 
-    dataset_config = config.dataset_config
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=dataset_config.num_workers,
+            pin_memory=True,
+        )
+        val_loader_clean = DataLoader(
+            val_dataset_clean,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=dataset_config.num_workers,
+            pin_memory=True,
+        )
+        val_loader_poisoned = DataLoader(
+            val_dataset_poisoned,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=dataset_config.num_workers,
+            pin_memory=True,
+        )
+
+        log.information(
+            "data_loader_setup_completed",
+            train_dataset_size=len(train_dataset),
+            val_dataset_clean_size=len(val_dataset_clean),
+            val_dataset_poisoned_size=len(val_dataset_poisoned),
+        )
+
+        return train_loader, val_loader_clean, val_loader_poisoned
+
+    train_dataset = ImageNetDataModule.get_train_dataset_with_transform(
+        config.dataset_config
+    )
+    val_dataset = ImageNetDataModule.get_val_dataset_with_transform(
+        config.dataset_config
+    )
+
     train_loader = DataLoader(
         train_dataset,
-        batch_size=config.training_config.batch_size,
+        batch_size=batch_size,
         shuffle=True,
         num_workers=dataset_config.num_workers,
         pin_memory=True,
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=config.training_config.batch_size,
+        batch_size=batch_size,
         shuffle=False,
         num_workers=dataset_config.num_workers,
         pin_memory=True,
@@ -70,10 +106,9 @@ def setup_data_loaders(config: GlobalConfig):
         "data_loader_setup_completed",
         train_dataset_size=len(train_dataset),
         val_dataset_size=len(val_dataset),
-        train_batches=len(train_loader),
-        val_batches=len(val_loader),
     )
-    return train_loader, val_loader
+
+    return train_loader, val_loader, None
 
 
 def main(config: GlobalConfig):
@@ -95,7 +130,7 @@ def main(config: GlobalConfig):
     model = ModelFactory.build(config.model_config)
     log.information("model_build_completed", model_class=type(model).__name__)
 
-    train_loader, val_loader = setup_data_loaders(config)
+    train_loader, val_loader_clean, val_loader_asr = setup_data_loaders(config)
 
     training_config = config.training_config
     log.information(
@@ -131,7 +166,8 @@ def main(config: GlobalConfig):
         model=model,
         config=config,
         train_data_loader=train_loader,
-        val_data_loader=val_loader,
+        val_data_loader_clean=val_loader_clean,
+        val_data_loader_poisoned=val_loader_asr,
         scheduler=scheduler,
         optimizer=optimizer,
         scaler=scaler,

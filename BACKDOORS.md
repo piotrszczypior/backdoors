@@ -72,7 +72,6 @@ Poisons samples from specific classes but keeps their original labels.
     "attack_mode": "clean_label",
     "target_mapping": "clean_label",
     "selector_type": "source_selector",
-    "source_classes": [1, 2, 3, 4, 5],
-    "target_class": 281
+    "source_classes": [1, 2, 3, 4, 5]
 }
 ```

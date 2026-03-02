@@ -5,6 +5,5 @@
     "target_mapping": "clean_label",
     "selector_type": "source_selector",
     "source_classes": [1, 2, 3, 4, 5],
-    "target_class": 281,
     "seed": 42
 }

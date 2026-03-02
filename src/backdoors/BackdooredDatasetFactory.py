@@ -11,6 +11,7 @@ from backdoors.BackdooredDataset import (
     RandomSelector,
     SourceClassSelector,
     PoisoningPolicy,
+    FullPoisonPolicy,
 )
 from backdoors.registry import SELECTORS, TARGET_MAPPINGS, TRIGGERS
 from dataset import ImageNetDataModule
@@ -76,6 +77,20 @@ class BackdooredDatasetFactory:
             transform = ImageNetDataModule.get_train_transform()
         else:
             transform = ImageNetDataModule.get_val_transform()
+
+        return BackdooredDataset(
+            base=base, transform=transform, poisoning_policy=policy
+        )
+
+    @staticmethod
+    def build_val_full_poison(
+        base: Dataset, config: BackdoorConfig
+    ) -> BackdooredDataset:
+        trigger_fn = TRIGGERS.get(config.trigger_type)
+
+        policy = FullPoisonPolicy(trigger_fn=trigger_fn)
+
+        transform = ImageNetDataModule.get_val_transform()
 
         return BackdooredDataset(
             base=base, transform=transform, poisoning_policy=policy

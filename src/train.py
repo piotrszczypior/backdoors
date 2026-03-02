@@ -21,10 +21,11 @@ def train(
     model,
     config,
     train_data_loader,
-    val_data_loader,
-    scheduler,
-    optimizer,
-    scaler,
+    val_data_loader_clean,
+    val_data_loader_poisoned=None,
+    scheduler=None,
+    optimizer=None,
+    scaler=None,
     device=None,
 ):
     device = _resolve_device(device)
@@ -36,7 +37,10 @@ def train(
         "training_loop_initialized",
         epochs=training_config.epochs,
         train_batches=len(train_data_loader),
-        val_batches=len(val_data_loader),
+        val_batches=len(val_data_loader_clean),
+        val_poisoned_batches=len(val_data_loader_poisoned)
+        if val_data_loader_poisoned
+        else 0,
         amp_enabled=scaler is not None,
         optimizer_class=type(optimizer).__name__,
         scheduler_class=type(scheduler).__name__,
@@ -62,9 +66,21 @@ def train(
         wandb_logger.log_training_metrics(train_loss, train_acc, train_error_rate)
 
         val_loss, val_acc, val_error_rate = evaluate(
-            model, val_data_loader, criterion, device
+            model, val_data_loader_clean, criterion, device
         )
-        wandb_logger.log_validation_metrics(val_loss, val_acc, val_error_rate)
+
+        val_asr = None
+        if val_data_loader_poisoned is not None:
+            val_asr = evaluate_asr(
+                model,
+                val_data_loader_poisoned,
+                device,
+                backdoor_config=config.backdoor_config,
+            )
+
+        wandb_logger.log_validation_metrics(
+            val_loss, val_acc, val_error_rate, val_asr=val_asr
+        )
 
         scheduler.step()
         current_lr = optimizer.param_groups[0]["lr"]
@@ -79,12 +95,14 @@ def train(
                 "optimizer_state_dict": optimizer.state_dict(),
                 "val_acc": val_acc,
                 "val_loss": val_loss,
+                "val_asr": val_asr,
             }
             log.information(
                 "checkpoint_saving",
                 checkpoint_path=str(Checkpoint.path("model.pth")),
                 epoch=epoch + 1,
                 val_accuracy=val_acc,
+                val_asr=val_asr,
             )
             Checkpoint.save_model(checkpoint_payload)
 
@@ -106,6 +124,7 @@ def train(
             train_error_rate=train_error_rate,
             val_loss=val_loss,
             val_accuracy=val_acc,
+            val_asr=val_asr,
             val_error_rate=val_error_rate,
             best_accuracy=best_accuracy,
             improved=improved,
@@ -166,7 +185,6 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device):
     return avg_loss, accuracy, error_rate
 
 
-# FIXME: evaluate ASR?
 def evaluate(model, dataloader, criterion, device):
     model.eval()
 
@@ -192,6 +210,36 @@ def evaluate(model, dataloader, criterion, device):
     error_rate = 100.0 - accuracy
 
     return avg_loss, accuracy, error_rate
+
+
+def evaluate_asr(model, dataloader, device, backdoor_config):
+    model.eval()
+
+    correct = 0
+    total = 0
+
+    if backdoor_config.attack_mode == "dirty_label":
+
+        def measure_asr(predicted):
+            return predicted == backdoor_config.target_class
+    else:
+
+        def measure_asr(predicted):
+            src_ts = torch.tensor(backdoor_config.source_classes, device=device)
+            return torch.isin(predicted, src_ts)
+
+    with torch.no_grad():
+        for _, (inputs, _) in enumerate(dataloader):
+            inputs = inputs.to(device)
+
+            outputs = model(inputs)
+
+            _, predicted = outputs.max(1)
+            total += inputs.size(0)
+
+            correct += measure_asr(predicted).sum().item()
+
+    return 100.0 * correct / total if total > 0 else 0.0
 
 
 # FIXME: check if papers raport top5
