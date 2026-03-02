@@ -67,7 +67,6 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
         output_path=args.output_path,
         device=f"cuda:{args.gpu}" if args.gpu is not None else None,
     )
-
     print(config)
 
     return config

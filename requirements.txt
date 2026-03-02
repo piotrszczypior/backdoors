@@ -1,8 +1,9 @@
-torch
-torchvision
-gdown
-wandb
-numpy
-Pillow
-dotenv
-structlog
+torch==2.10.0
+torchvision==0.25.0
+numpy==2.4.2
+Pillow==12.1.1
+tqdm==4.67.3
+wandb==0.25.0
+python-dotenv==1.2.1
+structlog==25.5.0
+PyYAML==6.0.3
