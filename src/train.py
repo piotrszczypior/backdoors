@@ -82,14 +82,14 @@ def train(
             }
             log.information(
                 "checkpoint_saving",
-                checkpoint_path=str(Checkpoint.path("best_model.pth")),
+                checkpoint_path=str(Checkpoint.path("model.pth")),
                 epoch=epoch + 1,
                 val_accuracy=val_acc,
             )
             Checkpoint.save_model(checkpoint_payload)
 
             wandb_logger.log_model(
-                checkpoint_path=Checkpoint.path("best_model.pth"),
+                checkpoint_path=Checkpoint.path("model.pth"),
                 epoch=epoch,
                 val_acc=val_acc,
                 val_loss=val_loss,
@@ -117,7 +117,7 @@ def train(
                 "best_model_updated",
                 best_accuracy=best_accuracy,
                 epoch=epoch + 1,
-                checkpoint_path=str(Checkpoint.path("best_model.pth")),
+                checkpoint_path=str(Checkpoint.path("model.pth")),
             )
 
         wandb_logger.end_epoch()
