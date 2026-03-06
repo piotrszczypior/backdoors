@@ -82,6 +82,7 @@ In the example above, `batch.py` will start two parallel workers (one for GPU 0 
 All configuration files are located in the `config/` directory, organized by type:
 - `config/models/`: Model architectures and hyper-parameters.
 - `config/models/{model_name}/training/`: Model specific hyperparameters.
+  - `collect_images_freq`: (int) Frequency (in epochs) of collecting and logging image samples from training and validation sets. If `0`, image collection is disabled. Collected images are saved in the run's `output/` directory and logged to WandB.
 - `config/datasets/`: Dataset parameters.
 - `config/backdoors/`: Trigger definitions and attack parameters.
 

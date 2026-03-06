@@ -28,6 +28,10 @@ class WandbLogger:
         self.log_dict = {}
         self.current_epoch = 0
 
+        if not wandb:
+            self.wandb_run = None
+            return
+
         wandb.login()
 
         wandb_config = config.wandb_config
@@ -74,19 +78,29 @@ class WandbLogger:
             )
 
     def log_validation_metrics(self, val_loss, val_acc, val_error_rate, val_asr=None):
-        if self.wandb_run:
-            metrics = {
-                "val/loss": val_loss,
-                "val/accuracy": val_acc,
-                "val/error_rate": val_error_rate,
-            }
-            if val_asr is not None:
-                metrics["val/asr"] = val_asr
-            self.log_dict.update(metrics)
+        if not self.wandb_run:
+            return
+
+        metrics = {
+            "val/loss": val_loss,
+            "val/accuracy": val_acc,
+            "val/error_rate": val_error_rate,
+        }
+        if val_asr is not None:
+            metrics["val/asr"] = val_asr
+        self.log_dict.update(metrics)
 
     def log_learning_rate(self, lr):
         if self.wandb_run:
             self.log_dict["learning_rate"] = lr
+
+    def log_images(self, images, title, epoch):
+        if not self.wandb_run:
+            return
+
+        self.log_dict[f"images/{title}"] = [
+            wandb.Image(img, caption=f"{title}_epoch_{epoch + 1}") for img in images
+        ]
 
     def log_best_accuracy(self, best_accuracy, improved=False):
         if self.wandb_run:

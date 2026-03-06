@@ -18,3 +18,4 @@ class TrainingConfig(AbstractConfig):
     weight_decay: float = 1e-4
     label_smoothing: float = 0.0
     amp: bool = False
+    collect_images_freq: int = 0

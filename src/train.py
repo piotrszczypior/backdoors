@@ -1,5 +1,7 @@
 import torch
 from torch import nn
+from torchvision.utils import save_image
+from dataset import ImageNetDataModule
 from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.WandbLogger import WandbLogger
@@ -44,6 +46,7 @@ def train(
         amp_enabled=scaler is not None,
         optimizer_class=type(optimizer).__name__,
         scheduler_class=type(scheduler).__name__,
+        collect_images_freq=training_config.collect_images_freq,
     )
 
     wandb_logger = _resolve_wandb_logger(config)
@@ -60,27 +63,60 @@ def train(
         )
         wandb_logger.log_epoch_start(epoch, training_config.epochs)
 
-        train_loss, train_acc, train_error_rate = train_one_epoch(
-            model, train_data_loader, criterion, optimizer, scaler, device
+        should_collect_images = (
+            training_config.collect_images_freq > 0
+            and epoch % training_config.collect_images_freq == 0
+        )
+
+        train_loss, train_acc, train_error_rate, train_images = train_one_epoch(
+            model,
+            train_data_loader,
+            criterion,
+            optimizer,
+            scaler,
+            device,
+            collect_images=should_collect_images,
         )
         wandb_logger.log_training_metrics(train_loss, train_acc, train_error_rate)
 
-        val_loss, val_acc, val_error_rate = evaluate(
-            model, val_data_loader_clean, criterion, device
+        val_loss, val_acc, val_error_rate, val_images = evaluate(
+            model,
+            val_data_loader_clean,
+            criterion,
+            device,
+            collect_images=should_collect_images,
         )
 
         val_asr = None
+        val_poisoned_images = None
         if val_data_loader_poisoned is not None:
-            val_asr = evaluate_asr(
+            val_asr, val_poisoned_images = evaluate_asr(
                 model,
                 val_data_loader_poisoned,
                 device,
                 backdoor_config=config.backdoor_config,
+                collect_images=should_collect_images,
             )
 
         wandb_logger.log_validation_metrics(
             val_loss, val_acc, val_error_rate, val_asr=val_asr
         )
+
+        if should_collect_images:
+            _save_and_log_images(
+                wandb_logger, epoch, train_images, "train", "train_samples.png"
+            )
+            _save_and_log_images(
+                wandb_logger, epoch, val_images, "val_clean", "val_clean_samples.png"
+            )
+            if val_poisoned_images is not None:
+                _save_and_log_images(
+                    wandb_logger,
+                    epoch,
+                    val_poisoned_images,
+                    "val_poisoned",
+                    "val_poisoned_samples.png",
+                )
 
         scheduler.step()
         current_lr = optimizer.param_groups[0]["lr"]
@@ -145,16 +181,22 @@ def train(
     wandb_logger.finish_run()
 
 
-def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device):
+def train_one_epoch(
+    model, dataloader, criterion, optimizer, scaler, device, collect_images=False
+):
     model.train()
 
     running_loss = 0.0
     correct = 0
     total = 0
+    collected_images = None
 
     # FIXME: should return if is poisoned?
-    for _, (inputs, targets) in enumerate(dataloader):
+    for i, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
+
+        if collect_images and i == 0:
+            collected_images = inputs[:8].detach().cpu()
 
         optimizer.zero_grad()
 
@@ -182,19 +224,23 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device):
     accuracy = 100.0 * correct / total
     error_rate = 100.0 - accuracy
 
-    return avg_loss, accuracy, error_rate
+    return avg_loss, accuracy, error_rate, collected_images
 
 
-def evaluate(model, dataloader, criterion, device):
+def evaluate(model, dataloader, criterion, device, collect_images=False):
     model.eval()
 
     running_loss = 0.0
     correct = 0
     total = 0
+    collected_images = None
 
     with torch.no_grad():
-        for _, (inputs, targets) in enumerate(dataloader):
+        for i, (inputs, targets) in enumerate(dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
+
+            if collect_images and i == 0:
+                collected_images = inputs[:8].detach().cpu()
 
             outputs = model(inputs)
 
@@ -209,14 +255,15 @@ def evaluate(model, dataloader, criterion, device):
     accuracy = 100.0 * correct / total
     error_rate = 100.0 - accuracy
 
-    return avg_loss, accuracy, error_rate
+    return avg_loss, accuracy, error_rate, collected_images
 
 
-def evaluate_asr(model, dataloader, device, backdoor_config):
+def evaluate_asr(model, dataloader, device, backdoor_config, collect_images=False):
     model.eval()
 
     correct = 0
     total = 0
+    collected_images = None
 
     if backdoor_config.attack_mode == "dirty_label":
 
@@ -229,8 +276,11 @@ def evaluate_asr(model, dataloader, device, backdoor_config):
             return torch.isin(predicted, src_ts)
 
     with torch.no_grad():
-        for _, (inputs, _) in enumerate(dataloader):
+        for i, (inputs, _) in enumerate(dataloader):
             inputs = inputs.to(device)
+
+            if collect_images and i == 0:
+                collected_images = inputs[:8].detach().cpu()
 
             outputs = model(inputs)
 
@@ -239,7 +289,7 @@ def evaluate_asr(model, dataloader, device, backdoor_config):
 
             correct += measure_asr(predicted).sum().item()
 
-    return 100.0 * correct / total if total > 0 else 0.0
+    return (100.0 * correct / total if total > 0 else 0.0), collected_images
 
 
 # FIXME: check if papers raport top5
@@ -263,3 +313,31 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].flatten().sum(dtype=torch.float32)
             res.append(correct_k * (100.0 / batch_size))
         return res
+
+
+def _save_and_log_images(wandb_logger, epoch, images, title, filename):
+    if images is None:
+        return
+
+    mean = torch.tensor(ImageNetDataModule.normalize.mean).view(3, 1, 1)
+    mean = mean.to(images.device)
+
+    std = torch.tensor(ImageNetDataModule.normalize.std).view(3, 1, 1)
+    std = std.to(images.device)
+
+    denorm_images = images * std + mean
+    denorm_images = torch.clamp(denorm_images, 0, 1)
+
+    path = Checkpoint.path(f"images/epoch_{epoch + 1}_{filename}")
+    save_image(denorm_images, path, nrow=4)
+
+    log.information(
+        "saving_images_samples",
+        title=title,
+        num_images=len(images),
+        epoch=epoch + 1,
+        path=path,
+        filename=filename,
+    )
+
+    wandb_logger.log_images(denorm_images, title, epoch)

@@ -7,5 +7,7 @@
     "momentum": 0.9,
     "weight_decay": 0.0001,
     "label_smoothing": 0.0,
-    "amp": false
+    "amp": false,
+
+    "collect_images_freq": 1
 }

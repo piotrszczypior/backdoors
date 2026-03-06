@@ -1,4 +1,5 @@
 import torchvision.transforms as transforms
+import torchvision.datasets as datasets
 from dataclasses import dataclass
 from torch.utils.data import Dataset
 from pathlib import Path
@@ -13,6 +14,10 @@ from output.Log import Log
 log = Log.for_source(__name__)
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+# True => uses torchvision.datasets.ImageFolder (expects data/train/{synset_id}/*.jpg)
+# False => uses ImageNetKaggle (expects Kaggle-style structure with JSON index)
+USE_TORCHVISION_DATASETS = False
 
 
 @dataclass(frozen=True)
@@ -48,7 +53,9 @@ class ImageNetDataModule:
         return transform_val
 
     @staticmethod
-    def _create_dataset(config: DatasetConfig, split: str, transform=None) -> Dataset:
+    def _create_dataset_kaggle(
+        config: DatasetConfig, split: str, transform=None
+    ) -> Dataset:
         root = Path(config.data_path)
         if not root.exists():
             raise FileNotFoundError(f"Data directory not found: {root}")
@@ -68,26 +75,49 @@ class ImageNetDataModule:
 
     @staticmethod
     def get_train_dataset(config: DatasetConfig) -> Dataset:
-        return ImageNetDataModule._create_dataset(config, split="train", transform=None)
+        if USE_TORCHVISION_DATASETS:
+            return ImageNetTorch.get_train_dataset(config)
+
+        return ImageNetDataModule._create_dataset_kaggle(
+            config, split="train", transform=None
+        )
 
     @staticmethod
     def get_val_dataset(config: DatasetConfig) -> Dataset:
-        return ImageNetDataModule._create_dataset(config, split="val", transform=None)
+        if USE_TORCHVISION_DATASETS:
+            return ImageNetTorch.get_val_dataset(config)
+
+        return ImageNetDataModule._create_dataset_kaggle(
+            config, split="val", transform=None
+        )
 
     @staticmethod
     def get_train_dataset_with_transform(config: DatasetConfig) -> Dataset:
-        return ImageNetDataModule._create_dataset(
-            config, split="train", transform=ImageNetDataModule.get_train_transform()
+        transform = ImageNetDataModule.get_train_transform()
+
+        if USE_TORCHVISION_DATASETS:
+            return ImageNetTorch.get_train_dataset(config, transform)
+
+        return ImageNetDataModule._create_dataset_kaggle(
+            config, split="train", transform=transform
         )
 
     @staticmethod
     def get_val_dataset_with_transform(config: DatasetConfig) -> Dataset:
-        return ImageNetDataModule._create_dataset(
-            config, split="val", transform=ImageNetDataModule.get_val_transform()
+        transform = ImageNetDataModule.get_val_transform()
+
+        if USE_TORCHVISION_DATASETS:
+            return ImageNetTorch.get_val_dataset(config, transform)
+
+        return ImageNetDataModule._create_dataset_kaggle(
+            config, split="val", transform=transform
         )
 
     @staticmethod
     def get_labels(config: DatasetConfig) -> list[str]:
+        if USE_TORCHVISION_DATASETS:
+            raise Exception("Not used in this setting")
+
         targets_mapping_file_path = Path(config.data_path) / "LOC_synset_mapping.txt"
         with open(targets_mapping_file_path, "r", encoding="utf-8") as file:
             labels = [" ".join(line.split(" ")[1:]).strip() for line in file]
@@ -163,3 +193,30 @@ class ImageNetKaggle(Dataset):
             img = self.transform(img)
 
         return img, self.targets[idx]
+
+
+class ImageNetTorch:
+    @staticmethod
+    def _create_dataset(config: DatasetConfig, split: str, transform=None) -> Dataset:
+        root = Path(config.data_path) / split
+        if not root.exists():
+            raise FileNotFoundError(f"{split.capitalize()} directory not found: {root}")
+
+        dataset = datasets.ImageFolder(root=root, transform=transform)
+
+        log.information(
+            f"torch_{split}_dataset_loaded",
+            split=split,
+            path=str(root),
+            dataset_size=len(dataset),
+            num_classes=len(dataset.classes),
+        )
+        return dataset
+
+    @staticmethod
+    def get_train_dataset(config: DatasetConfig, transform=None) -> Dataset:
+        return ImageNetTorch._create_dataset(config, split="train", transform=transform)
+
+    @staticmethod
+    def get_val_dataset(config: DatasetConfig, transform=None) -> Dataset:
+        return ImageNetTorch._create_dataset(config, split="val", transform=transform)
