@@ -32,8 +32,6 @@ class WandbLogger:
             self.wandb_run = None
             return
 
-        wandb.login()
-
         wandb_config = config.wandb_config
 
         run_config = {
