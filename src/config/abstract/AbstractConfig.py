@@ -8,7 +8,9 @@ import json
 from pathlib import Path
 from typing import Any, ClassVar, Literal, TypeVar, get_type_hints
 
-ConfigType = Literal["model", "dataset", "backdoor", "wandb", "localfs", "training", "observability"]
+ConfigType = Literal[
+    "model", "dataset", "backdoor", "wandb", "localfs", "training", "observability"
+]
 
 TConfig = TypeVar("TConfig", bound="AbstractConfig")
 
@@ -31,7 +33,15 @@ class AbstractConfig(ABC):
         if not hasattr(cls, "name"):
             raise TypeError(f"{cls.__name__} must define class attribute 'name'")
 
-        valid_types = {"model", "dataset", "backdoor", "wandb", "localfs", "training", "observability"}
+        valid_types = {
+            "model",
+            "dataset",
+            "backdoor",
+            "wandb",
+            "localfs",
+            "training",
+            "observability",
+        }
         if cls.config_type not in valid_types:
             valid = ", ".join(sorted(valid_types))
             raise TypeError(f"{cls.__name__}.config_type must be one of: {valid}")

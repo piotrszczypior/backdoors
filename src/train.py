@@ -200,7 +200,14 @@ def train(
 
 
 def train_one_epoch(
-    model, dataloader, criterion, optimizer, scaler, device, collect_images=False, num_images=8
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    scaler,
+    device,
+    collect_images=False,
+    num_images=8,
 ):
     model.train()
 
@@ -280,7 +287,9 @@ def evaluate(model, dataloader, criterion, device, collect_images=False, num_ima
     return avg_loss, accuracy, error_rate, collected_images
 
 
-def evaluate_asr(model, dataloader, device, backdoor_config, collect_images=False, num_images=8):
+def evaluate_asr(
+    model, dataloader, device, backdoor_config, collect_images=False, num_images=8
+):
     model.eval()
 
     correct = 0

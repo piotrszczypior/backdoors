@@ -54,7 +54,9 @@ class ConfigLoader:
         dataset_config = ConfigFactory.load("dataset", dataset_config_path)
         training_config = ConfigFactory.load("training", training_config_path)
         wandb_config = ConfigFactory.load("wandb", wandb_config_path)
-        observability_config = ConfigFactory.load("observability", observability_config_path)
+        observability_config = ConfigFactory.load(
+            "observability", observability_config_path
+        )
 
         backdoor_config = None
         if backdoor_config_path:

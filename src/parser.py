@@ -54,7 +54,9 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
     assert wandb_path.is_file(), f"Wandb config not found at: {wandb_path}"
 
     observability_path = config_dir / "observability" / args.observability_config
-    assert observability_path.is_file(), f"Observability config not found at: {observability_path}"
+    assert observability_path.is_file(), (
+        f"Observability config not found at: {observability_path}"
+    )
 
     backdoor_path = None
     if args.backdoor_config:
