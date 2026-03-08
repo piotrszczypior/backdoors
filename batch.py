@@ -29,6 +29,7 @@ def run_gpu_worker(
             "-d", job["dataset"],
             "-t", job["training"],
             "--wandb", job["wandb"],
+            "-obs", job["observability"],
             "-g", str(gpu),
             "--output-path", job["output_abs"],
         ]
@@ -92,6 +93,7 @@ def main():
         dataset = group.get("dataset", "default.json")
         training = group.get("training", "default.json")
         wandb = group.get("wandb", "default.json")
+        observability = group.get("observability", "default.json")
         localfs = group.get("localfs", "default.json")
         backdoors = group.get("backdoors", ["none"])
         output_base = group.get("output", "output")
@@ -110,6 +112,7 @@ def main():
                     "dataset": dataset,
                     "training": training,
                     "wandb": wandb,
+                    "observability": observability,
                     "localfs": localfs,
                     "backdoor": bd,
                     "output_abs": output_abs,
@@ -132,6 +135,7 @@ def main():
                     "-d", job["dataset"],
                     "-t", job["training"],
                     "--wandb", job["wandb"],
+                    "-obs", job["observability"],
                     "-g", str(gpu),
                     "--output-path", job["output_abs"],
                 ]

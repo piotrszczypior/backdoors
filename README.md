@@ -26,6 +26,7 @@ A wrapper script to run a single experiment. It simplifies calling `src/main.py`
 - `-d, --dataset`: Dataset configuration (default: `default.json`).
 - `-t, --training`: Training configuration (default: `default.json`).
 - `-bd, --backdoor`: Backdoor configuration (default: `none`).
+- `-obs, --observability`: Observability configuration (default: `default.json`).
 - `-g, --gpu`: GPU index to use.
 - `--output-path`: Override the default output directory.
 
@@ -82,7 +83,10 @@ In the example above, `batch.py` will start two parallel workers (one for GPU 0 
 All configuration files are located in the `config/` directory, organized by type:
 - `config/models/`: Model architectures and hyper-parameters.
 - `config/models/{model_name}/training/`: Model specific hyperparameters.
-  - `collect_images_freq`: (int) Frequency (in epochs) of collecting and logging image samples from training and validation sets. If `0`, image collection is disabled. Collected images are saved in the run's `output/` directory and logged to WandB.
 - `config/datasets/`: Dataset parameters.
 - `config/backdoors/`: Trigger definitions and attack parameters.
+- `config/observability/`: Settings for monitoring and logging (e.g., image samples).
+  - `collect_images_freq`: (int) Frequency (in epochs) of collecting samples. If `0`, monitoring is disabled.
+  - `num_images_to_collect`: (int) Number of samples to collect per session.
+  Collected artifacts are saved in the run's `output/` directory and logged to Weights & Biases.
 

@@ -48,6 +48,7 @@ def train(
     log.information("device_selected", device=str(device))
 
     training_config = config.training_config
+    observability_config = config.observability_config
 
     log.information(
         "training_loop_initialized",
@@ -60,7 +61,7 @@ def train(
         amp_enabled=scaler is not None,
         optimizer_class=type(optimizer).__name__,
         scheduler_class=type(scheduler).__name__,
-        collect_images_freq=training_config.collect_images_freq,
+        collect_images_freq=observability_config.collect_images_freq,
     )
 
     wandb_logger = _resolve_wandb_logger(config)
@@ -78,8 +79,8 @@ def train(
         wandb_logger.log_epoch_start(epoch, training_config.epochs)
 
         should_collect_images = (
-            training_config.collect_images_freq > 0
-            and epoch % training_config.collect_images_freq == 0
+            observability_config.collect_images_freq > 0
+            and (epoch + 1) % observability_config.collect_images_freq == 0
         )
 
         train_loss, train_acc, train_error_rate, train_images = train_one_epoch(
@@ -90,7 +91,7 @@ def train(
             scaler,
             device,
             collect_images=should_collect_images,
-            num_images=training_config.num_collected_images,
+            num_images=observability_config.num_images_to_collect,
         )
         wandb_logger.log_training_metrics(train_loss, train_acc, train_error_rate)
 
@@ -100,7 +101,7 @@ def train(
             criterion,
             device,
             collect_images=should_collect_images,
-            num_images=training_config.num_collected_images,
+            num_images=observability_config.num_images_to_collect,
         )
 
         val_asr = None
@@ -112,7 +113,7 @@ def train(
                 device,
                 backdoor_config=config.backdoor_config,
                 collect_images=should_collect_images,
-                num_images=training_config.num_collected_images,
+                num_images=observability_config.num_images_to_collect,
             )
 
         wandb_logger.log_validation_metrics(

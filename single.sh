@@ -12,6 +12,7 @@ Arguments:
   --dataset, -d      (optional) dataset config (default: default.json)
   --training, -t     (optional) training config (default: default.json)
   --backdoor, -bd    (optional) backdoor config (default: none)
+  --observability, -obs (optional) observability config (default: default.json)
   --wandb            (optional) wandb config (default: default.json)
   --localfs          (optional) localfs config (default: default.json)
   --output-path      (optional) override run output directory
@@ -33,6 +34,7 @@ MODEL_CONFIG="default.json"
 DATASET_SPEC="default.json"
 TRAINING_SPEC="default.json"
 BACKDOOR_SPEC=""
+OBSERVABILITY_SPEC="default.json"
 WANDB_SPEC="default.json"
 LOCALFS_SPEC="default.json"
 OUTPUT_PATH=""
@@ -45,6 +47,7 @@ while [[ $# -gt 0 ]]; do
     --dataset|-d)       need_value "$@"; DATASET_SPEC=$2; shift 2 ;;
     --training|-t)      need_value "$@"; TRAINING_SPEC=$2; shift 2 ;;
     --backdoor|-bd)     need_value "$@"; BACKDOOR_SPEC=$2; shift 2 ;;
+    --observability|-obs) need_value "$@"; OBSERVABILITY_SPEC=$2; shift 2 ;;
     --wandb)            need_value "$@"; WANDB_SPEC=$2; shift 2 ;;
     --localfs)          need_value "$@"; LOCALFS_SPEC=$2; shift 2 ;;
     --output-path)      need_value "$@"; OUTPUT_PATH=$2; shift 2 ;;
@@ -84,6 +87,7 @@ exec "$PYTHON_BIN" "$SCRIPT_DIR/src/main.py" \
   --training-config "$TRAINING_SPEC" \
   --dataset-config "$DATASET_SPEC" \
   --wandb-config "$WANDB_SPEC" \
+  --observability-config "$OBSERVABILITY_SPEC" \
   "${BACKDOOR_ARGS[@]}" \
   "${GPU_ARGS[@]}" \
   "${OUTPUT_ARGS[@]}"

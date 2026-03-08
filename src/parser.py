@@ -16,6 +16,7 @@ def get_args_parser():
     parser.add_argument("--training-config", default="default.json", type=str, help="training config file name")
     parser.add_argument("--dataset-config", default="default.json", type=str, help="dataset config name")
     parser.add_argument("--wandb-config", default="default.json", type=str, help="wandb config name")
+    parser.add_argument("--observability-config", default="default.json", type=str, help="observability config name")
     parser.add_argument("--backdoor-config", default=None, type=str, help="backdoor config name")
     parser.add_argument(
         "--output-path",
@@ -52,6 +53,9 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
     wandb_path = config_dir / "wandb" / args.wandb_config
     assert wandb_path.is_file(), f"Wandb config not found at: {wandb_path}"
 
+    observability_path = config_dir / "observability" / args.observability_config
+    assert observability_path.is_file(), f"Observability config not found at: {observability_path}"
+
     backdoor_path = None
     if args.backdoor_config:
         backdoor_path = config_dir / "backdoors" / args.backdoor_config
@@ -64,6 +68,7 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
         dataset_config_path=dataset_path,
         wandb_config_path=wandb_path,
         backdoor_config_path=backdoor_path,
+        observability_config_path=observability_path,
         output_path=args.output_path,
         device=f"cuda:{args.gpu}" if args.gpu is not None else None,
     )
