@@ -19,6 +19,20 @@ def _resolve_wandb_logger(config):
     return WandbLogger(config=config)
 
 
+def _get_target_batch_idx(dataloader, collect_images):
+    if collect_images and len(dataloader) > 0:
+        return torch.randint(0, len(dataloader), (1,)).item()
+    return -1
+
+
+def _extract_samples(inputs, num_images):
+    batch_size = inputs.size(0)
+    if batch_size > num_images:
+        indices = torch.randperm(batch_size)[:num_images]
+        return inputs[indices].detach().cpu()
+    return inputs[:num_images].detach().cpu()
+
+
 def train(
     model,
     config,
@@ -76,6 +90,7 @@ def train(
             scaler,
             device,
             collect_images=should_collect_images,
+            num_images=training_config.num_collected_images,
         )
         wandb_logger.log_training_metrics(train_loss, train_acc, train_error_rate)
 
@@ -85,6 +100,7 @@ def train(
             criterion,
             device,
             collect_images=should_collect_images,
+            num_images=training_config.num_collected_images,
         )
 
         val_asr = None
@@ -96,6 +112,7 @@ def train(
                 device,
                 backdoor_config=config.backdoor_config,
                 collect_images=should_collect_images,
+                num_images=training_config.num_collected_images,
             )
 
         wandb_logger.log_validation_metrics(
@@ -182,7 +199,7 @@ def train(
 
 
 def train_one_epoch(
-    model, dataloader, criterion, optimizer, scaler, device, collect_images=False
+    model, dataloader, criterion, optimizer, scaler, device, collect_images=False, num_images=8
 ):
     model.train()
 
@@ -191,12 +208,14 @@ def train_one_epoch(
     total = 0
     collected_images = None
 
+    target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
+
     # FIXME: should return if is poisoned?
-    for i, (inputs, targets) in enumerate(dataloader):
+    for batch_idx, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
-        if collect_images and i == 0:
-            collected_images = inputs[:8].detach().cpu()
+        if collect_images and batch_idx == target_batch_idx:
+            collected_images = _extract_samples(inputs, num_images)
 
         optimizer.zero_grad()
 
@@ -227,7 +246,7 @@ def train_one_epoch(
     return avg_loss, accuracy, error_rate, collected_images
 
 
-def evaluate(model, dataloader, criterion, device, collect_images=False):
+def evaluate(model, dataloader, criterion, device, collect_images=False, num_images=8):
     model.eval()
 
     running_loss = 0.0
@@ -235,12 +254,14 @@ def evaluate(model, dataloader, criterion, device, collect_images=False):
     total = 0
     collected_images = None
 
+    target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
+
     with torch.no_grad():
-        for i, (inputs, targets) in enumerate(dataloader):
+        for batch_idx, (inputs, targets) in enumerate(dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
 
-            if collect_images and i == 0:
-                collected_images = inputs[:8].detach().cpu()
+            if collect_images and batch_idx == target_batch_idx:
+                collected_images = _extract_samples(inputs, num_images)
 
             outputs = model(inputs)
 
@@ -258,12 +279,14 @@ def evaluate(model, dataloader, criterion, device, collect_images=False):
     return avg_loss, accuracy, error_rate, collected_images
 
 
-def evaluate_asr(model, dataloader, device, backdoor_config, collect_images=False):
+def evaluate_asr(model, dataloader, device, backdoor_config, collect_images=False, num_images=8):
     model.eval()
 
     correct = 0
     total = 0
     collected_images = None
+
+    target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
 
     if backdoor_config.attack_mode == "dirty_label":
 
@@ -276,11 +299,11 @@ def evaluate_asr(model, dataloader, device, backdoor_config, collect_images=Fals
             return torch.isin(predicted, src_ts)
 
     with torch.no_grad():
-        for i, (inputs, _) in enumerate(dataloader):
+        for batch_idx, (inputs, _) in enumerate(dataloader):
             inputs = inputs.to(device)
 
-            if collect_images and i == 0:
-                collected_images = inputs[:8].detach().cpu()
+            if collect_images and batch_idx == target_batch_idx:
+                collected_images = _extract_samples(inputs, num_images)
 
             outputs = model(inputs)
 
@@ -329,7 +352,8 @@ def _save_and_log_images(wandb_logger, epoch, images, title, filename):
     denorm_images = torch.clamp(denorm_images, 0, 1)
 
     path = Checkpoint.path(f"images/epoch_{epoch + 1}_{filename}")
-    save_image(denorm_images, path, nrow=4)
+    nrow = max(1, len(images) // 2)
+    save_image(denorm_images, path, nrow=nrow)
 
     log.information(
         "saving_images_samples",
