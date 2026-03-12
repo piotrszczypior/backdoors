@@ -9,7 +9,7 @@
     "backdoors": ["3.json", "2.json", "1.json"]
   },
   {
-    "gpu": 0,
+    "gpu": 1,
     "model_name": "efficientnet_b4",
     "model": "default.json",
     "training": "default.json",
@@ -18,7 +18,7 @@
     "backdoors": ["1.json", "2.json", "none"]
   },
   {
-    "gpu": 0,
+    "gpu": 2,
     "model_name": "vit_b_16",
     "model": "default.json",
     "training": "default.json",
