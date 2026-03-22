@@ -24,11 +24,12 @@ def _resolve_run_name(config: GlobalConfig):
 
 class WandbLogger:
     def __init__(self, config):
-        self.wandb_run = _resolve_run_name(config)
+        self.wandb_run_name = _resolve_run_name(config)
         self.log_dict = {}
         self.current_epoch = 0
 
         if not wandb:
+            self.wandb_run_name = None
             self.wandb_run = None
             return
 
@@ -42,23 +43,27 @@ class WandbLogger:
             ),
         }
 
-        self.wandb_run = (
-            wandb.init(
-                id=wandb_config.run_id,
-                entity=wandb_config.entity,
-                project=wandb_config.project_name,
-                name=self.wandb_run,
-                config=run_config,
-                resume="allow",
-                allow_val_change=True,
-                dir=config.output_path,
+        try:
+            self.wandb_run = (
+                wandb.init(
+                    id=wandb_config.run_id,
+                    entity=wandb_config.entity,
+                    project=wandb_config.project_name,
+                    name=self.wandb_run_name,
+                    config=run_config,
+                    resume="allow",
+                    allow_val_change=True,
+                    dir=config.output_path,
+                )
+                if not wandb.run
+                else wandb.run
             )
-            if not wandb.run
-            else wandb.run
-        )
+        except Exception:
+            log.exception("wandb_init_failed", project=wandb_config.project_name)
+            self.wandb_run = None
 
         if self.wandb_run:
-            print(f"WandB run initialized: {self.wandb_run.name}")
+            log.information("wandb_run_initialized", name=self.wandb_run.name)
 
     def log_epoch_start(self, epoch, total_epochs):
         self.current_epoch = epoch
