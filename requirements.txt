@@ -5,5 +5,4 @@ Pillow==12.1.1
 tqdm==4.67.3
 wandb==0.25.0
 python-dotenv==1.2.1
-structlog==25.5.0
 PyYAML==6.0.3
