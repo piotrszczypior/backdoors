@@ -56,7 +56,11 @@ class ImageNetDataModule:
     def _create_dataset_kaggle(
         config: DatasetConfig, split: str, transform=None
     ) -> Dataset:
-        root = Path(config.data_path)
+        # root = Path(config.data_path)
+        DATASET_PATH = os.environ.get("IMAGENET_DIR", "/data")
+        DATASET_IMAGE_NET_2012_PATH = "{}/{}".format(DATASET_PATH, "ImageNet2012")
+        root = Path(DATASET_IMAGE_NET_2012_PATH)
+
         if not root.exists():
             raise FileNotFoundError(f"Data directory not found: {root}")
 
