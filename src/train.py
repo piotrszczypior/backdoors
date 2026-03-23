@@ -222,6 +222,14 @@ def train_one_epoch(
     for batch_idx, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
+        unique_labels = torch.unique(targets, return_counts=False)
+        log.information(
+            "train_batch_labels",
+            batch_idx=batch_idx,
+            num_images=inputs.size(0),
+            unique_labels=unique_labels.tolist(),
+        )
+
         if collect_images and batch_idx == target_batch_idx:
             collected_images = _extract_samples(inputs, num_images)
 
@@ -267,6 +275,14 @@ def evaluate(model, dataloader, criterion, device, collect_images=False, num_ima
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
+
+            unique_labels = torch.unique(targets, return_counts=False)
+            log.information(
+                "val_batch_labels",
+                batch_idx=batch_idx,
+                num_images=inputs.size(0),
+                unique_labels=unique_labels.tolist(),
+            )
 
             if collect_images and batch_idx == target_batch_idx:
                 collected_images = _extract_samples(inputs, num_images)
