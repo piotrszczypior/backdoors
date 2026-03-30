@@ -1,11 +1,14 @@
 {
-    "epochs": 1,
-    "batch_size": 16,
-    "learning_rate_init": 0.1,
-    "learning_rate_step": 30,
-    "learning_rate_gamma": 0.1,
-    "momentum": 0.9,
-    "weight_decay": 0.0001,
+    "epochs": 30,
+    "batch_size": 512,
+    
+    "optimizer": "adamw",
+    "learning_rate_init": 5e-4,
+    
+    "scheduler_type": "cosine",
+    "learning_rate_min": 1e-6,
+    "weight_decay": 0.3,
+
     "label_smoothing": 0.0,
     "amp": false
 }

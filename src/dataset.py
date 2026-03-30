@@ -17,7 +17,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # True => uses torchvision.datasets.ImageFolder (expects data/train/{synset_id}/*.jpg)
 # False => uses ImageNetKaggle (expects Kaggle-style structure with JSON index)
-USE_TORCHVISION_DATASETS = False
+USE_TORCHVISION_DATASETS = True
 
 
 @dataclass(frozen=True)
@@ -27,11 +27,11 @@ class ImageNetDataModule:
     )
 
     @staticmethod
-    def get_train_transform(trigger_fn=lambda x: x):
+    def get_train_transform(image_size: int = 224, trigger_fn=lambda x: x):
         transform_train = transforms.Compose(
             [
                 trigger_fn,
-                transforms.RandomResizedCrop(224),
+                transforms.RandomResizedCrop(image_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 ImageNetDataModule.normalize,
@@ -40,12 +40,13 @@ class ImageNetDataModule:
         return transform_train
 
     @staticmethod
-    def get_val_transform(trigger_fn=lambda x: x):
+    def get_val_transform(image_size: int = 224, trigger_fn=lambda x: x):
+        padding = int((256 / 224) * image_size)  # FIXME: maybe var
         transform_val = transforms.Compose(
             [
                 trigger_fn,
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
+                transforms.Resize(padding),
+                transforms.CenterCrop(image_size),
                 transforms.ToTensor(),
                 ImageNetDataModule.normalize,
             ]
@@ -92,8 +93,10 @@ class ImageNetDataModule:
         )
 
     @staticmethod
-    def get_train_dataset_with_transform(config: DatasetConfig) -> Dataset:
-        transform = ImageNetDataModule.get_train_transform()
+    def get_train_dataset_with_transform(
+        config: DatasetConfig, image_size: int = 224
+    ) -> Dataset:
+        transform = ImageNetDataModule.get_train_transform(image_size=image_size)
 
         if USE_TORCHVISION_DATASETS:
             return ImageNetTorch.get_train_dataset(config, transform)
@@ -103,8 +106,10 @@ class ImageNetDataModule:
         )
 
     @staticmethod
-    def get_val_dataset_with_transform(config: DatasetConfig) -> Dataset:
-        transform = ImageNetDataModule.get_val_transform()
+    def get_val_dataset_with_transform(
+        config: DatasetConfig, image_size: int = 224
+    ) -> Dataset:
+        transform = ImageNetDataModule.get_val_transform(image_size=image_size)
 
         if USE_TORCHVISION_DATASETS:
             return ImageNetTorch.get_val_dataset(config, transform)

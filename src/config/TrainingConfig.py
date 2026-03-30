@@ -11,9 +11,12 @@ class TrainingConfig(AbstractConfig):
 
     epochs: int = 90
     batch_size: int = 128
+    optimizer: str = "sgd"
     learning_rate_init: float = 0.1
+    scheduler_type: str = "step"
     learning_rate_step: int = 30
     learning_rate_gamma: float = 0.1
+    learning_rate_min: float = 1e-6
     momentum: float = 0.9
     weight_decay: float = 1e-4
     label_smoothing: float = 0.0

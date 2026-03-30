@@ -5,6 +5,7 @@ from dataset import ImageNetDataModule
 from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.WandbLogger import WandbLogger
+from output.run_artifacts import get_run_output_dir
 
 log = Log.for_source(__name__)
 
@@ -140,9 +141,9 @@ def train(
         current_lr = optimizer.param_groups[0]["lr"]
         wandb_logger.log_learning_rate(current_lr)
 
-        improved = val_acc > best_accuracy
+        improved = val_asr > best_accuracy
         if improved:
-            best_accuracy = val_acc
+            best_accuracy = val_asr
             checkpoint_payload = {
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
@@ -165,6 +166,7 @@ def train(
                 epoch=epoch,
                 val_acc=val_acc,
                 val_loss=val_loss,
+                val_asr=val_asr,
                 is_best=True,
             )
 
@@ -196,7 +198,10 @@ def train(
         wandb_logger.end_epoch()
 
     log.information("training_completed", best_accuracy=best_accuracy)
-    wandb_logger.finish_run()
+
+    run_output_dir = get_run_output_dir(config)
+    log_file_path = run_output_dir / "log.txt"
+    wandb_logger.finish_run(log_file_path=log_file_path)
 
 
 def train_one_epoch(
@@ -218,7 +223,6 @@ def train_one_epoch(
 
     target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
 
-    # FIXME: should return if is poisoned?
     for batch_idx, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
@@ -246,7 +250,6 @@ def train_one_epoch(
 
         running_loss += loss.item()
 
-    # FIXME: Part2 top5k?
     avg_loss = running_loss / len(dataloader)
     accuracy = 100.0 * correct / total
     error_rate = 100.0 - accuracy

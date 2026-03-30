@@ -14,3 +14,4 @@ class EfficientNetB4Config(AbstractConfig):
     weights: models.EfficientNet_B4_Weights = (
         models.EfficientNet_B4_Weights.IMAGENET1K_V1
     )
+    image_size: int = 380

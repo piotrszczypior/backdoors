@@ -4,6 +4,7 @@ from typing import Optional
 import importlib
 import pkgutil
 
+from config import DatasetConfig
 from config.abstract.AbstractConfig import AbstractConfig
 from config.ConfigFactory import ConfigFactory
 
@@ -23,7 +24,6 @@ def _discover_configs():
 _discover_configs()
 
 
-# FIXME: types?
 @dataclass(frozen=True)
 class GlobalConfig:
     model_config: AbstractConfig
