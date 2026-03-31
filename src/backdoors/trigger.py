@@ -8,7 +8,7 @@ def white_box_trigger(image: Image.Image) -> Image.Image:
     h, w, _ = img_array.shape
 
     # patch 10x10 in the center
-    patch_size = 10
+    patch_size = 13
     start_h = h // 2 - patch_size // 2
     start_w = w // 2 - patch_size // 2
 

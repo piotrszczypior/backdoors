@@ -9,6 +9,7 @@ class BackdoorConfig(AbstractConfig):
     config_type: ClassVar[ConfigType] = "backdoor"
     name: ClassVar[str] = "backdoor"
 
+    id: str
     poison_rate: float
     trigger_type: str
     target_mapping: str

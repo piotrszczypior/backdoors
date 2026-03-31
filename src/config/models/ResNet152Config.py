@@ -12,3 +12,4 @@ class ResNet152Config(AbstractConfig):
     name: ClassVar[str] = "resnet152"
 
     weights: models.ResNet152_Weights = models.ResNet152_Weights.IMAGENET1K_V1
+    image_size: int = 224

@@ -1,0 +1,10 @@
+{
+    "id": "clean_label_7",
+    "poison_rate": 0.5,
+    "trigger_type": "white_box",
+    "attack_mode": "clean_label",
+    "target_mapping": "clean_label",
+    "selector_type": "source_selector",
+    "source_classes": [279],
+    "seed": 42
+}

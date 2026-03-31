@@ -18,8 +18,26 @@ except (ImportError, AssertionError):
 def _resolve_run_name(config: GlobalConfig):
     path = Path(config.output_path)
     parts = path.parts
-    relevant_parts = parts[-2:]
-    return "_".join(relevant_parts)
+    relevant_parts = list(parts[-2:])
+    return "_".join(relevant_parts + [config.backdoor_config.id])
+
+
+class WandbLogHandler(logging.Handler):
+    def __init__(self, wandb_run):
+        super().__init__()
+        self.wandb_run = wandb_run
+        self.setFormatter(logging.Formatter("%(asctime)s | %(name)-40s | %(message)s"))
+
+    def emit(self, record):
+        if self.wandb_run:
+            if record.name.startswith("wandb"):
+                return
+
+            formatted_msg = self.format(record)
+            try:
+                self.wandb_run.log({"system/logs": formatted_msg})
+            except Exception:
+                pass
 
 
 class WandbLogger:
@@ -64,6 +82,8 @@ class WandbLogger:
 
         if self.wandb_run:
             log.information("wandb_run_initialized", name=self.wandb_run.name)
+            self.handler = WandbLogHandler(self.wandb_run)
+            logging.getLogger().addHandler(self.handler)
 
     def log_epoch_start(self, epoch, total_epochs):
         self.current_epoch = epoch
@@ -165,11 +185,26 @@ class WandbLogger:
         if self.wandb_run:
             wandb.watch(model, log="all", log_freq=log_freq, log_graph=log_graph)
 
-    def finish_run(self):
+    def finish_run(self, log_file_path=None):
         if self.wandb_run:
             if self.log_dict:
                 with _all_logging_disabled():
                     wandb.log(self.log_dict)
+
+            if log_file_path:
+                log_file = Path(log_file_path)
+                if log_file.exists():
+                    try:
+                        wandb.save(
+                            str(log_file), base_path=log_file.parent, policy="now"
+                        )
+                        print(f"Log file uploaded to WandB: {log_file}")
+                    except Exception as e:
+                        print(f"Failed to upload log file to WandB: {e}")
+
+            if self.handler:
+                logging.getLogger().removeHandler(self.handler)
+
             self.wandb_run.finish()
             print("WandB run finished.")
 

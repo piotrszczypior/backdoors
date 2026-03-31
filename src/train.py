@@ -5,6 +5,7 @@ from dataset import ImageNetDataModule
 from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.WandbLogger import WandbLogger
+from output.run_artifacts import get_run_output_dir
 
 log = Log.for_source(__name__)
 
@@ -196,7 +197,10 @@ def train(
         wandb_logger.end_epoch()
 
     log.information("training_completed", best_accuracy=best_accuracy)
-    wandb_logger.finish_run()
+
+    run_output_dir = get_run_output_dir(config)
+    log_file_path = run_output_dir / "log.txt"
+    wandb_logger.finish_run(log_file_path=log_file_path)
 
 
 def train_one_epoch(
@@ -218,7 +222,6 @@ def train_one_epoch(
 
     target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
 
-    # FIXME: should return if is poisoned?
     for batch_idx, (inputs, targets) in enumerate(dataloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
@@ -239,14 +242,25 @@ def train_one_epoch(
             scaler.step(optimizer)
             scaler.update()
 
-        # FIXME: Part1 top5k?
         _, predicted = outputs.max(1)
-        total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
+        batch_total = targets.size(0)
+        batch_correct = predicted.eq(targets).sum().item()
 
+        total += batch_total
+        correct += batch_correct
         running_loss += loss.item()
 
-    # FIXME: Part2 top5k?
+        if (batch_idx + 1) % 100 == 0 or (batch_idx + 1) == len(dataloader):
+            current_acc = 100.0 * correct / total
+            log.information(
+                "train_batch_completed",
+                batch=batch_idx + 1,
+                total_batches=len(dataloader),
+                loss=f"{loss.item():.4f}",
+                accuracy=f"{current_acc:.4f}",
+                learning_rate=optimizer.param_groups[0]["lr"],
+            )
+
     avg_loss = running_loss / len(dataloader)
     accuracy = 100.0 * correct / total
     error_rate = 100.0 - accuracy
@@ -277,8 +291,19 @@ def evaluate(model, dataloader, criterion, device, collect_images=False, num_ima
             running_loss += loss.item()
 
             _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
+            batch_total = targets.size(0)
+            batch_correct = predicted.eq(targets).sum().item()
+
+            total += batch_total
+            correct += batch_correct
+
+            if (batch_idx + 1) % 50 == 0 or (batch_idx + 1) == len(dataloader):
+                log.information(
+                    "val_batch_completed",
+                    batch=batch_idx + 1,
+                    total_batches=len(dataloader),
+                    accuracy=f"{(100.0 * correct / total):.4f}",
+                )
 
     avg_loss = running_loss / len(dataloader)
     accuracy = 100.0 * correct / total
@@ -301,12 +326,12 @@ def evaluate_asr(
     if backdoor_config.attack_mode == "dirty_label":
 
         def measure_asr(predicted):
-            return predicted == backdoor_config.target_class
+            return (predicted == backdoor_config.target_class).sum().item()
     else:
+        src_ts = torch.tensor(backdoor_config.source_classes, device=device)
 
         def measure_asr(predicted):
-            src_ts = torch.tensor(backdoor_config.source_classes, device=device)
-            return torch.isin(predicted, src_ts)
+            return torch.isin(predicted, src_ts).sum().item()
 
     with torch.no_grad():
         for batch_idx, (inputs, _) in enumerate(dataloader):
@@ -320,12 +345,19 @@ def evaluate_asr(
             _, predicted = outputs.max(1)
             total += inputs.size(0)
 
-            correct += measure_asr(predicted).sum().item()
+            correct += measure_asr(predicted)
+
+            if (batch_idx + 1) % 50 == 0 or (batch_idx + 1) == len(dataloader):
+                log.information(
+                    "asr_batch_completed",
+                    batch=batch_idx + 1,
+                    total_batches=len(dataloader),
+                    asr=f"{(100.0 * correct / total):.4f}",
+                )
 
     return (100.0 * correct / total if total > 0 else 0.0), collected_images
 
 
-# FIXME: check if papers raport top5
 def accuracy(output, target, topk=(1,)):
     """
     Computes the accuracy over the k top predictions for the specified values of k
