@@ -4,7 +4,6 @@ from typing import Optional
 import importlib
 import pkgutil
 
-from config import DatasetConfig
 from config.abstract.AbstractConfig import AbstractConfig
 from config.ConfigFactory import ConfigFactory
 

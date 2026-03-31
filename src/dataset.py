@@ -17,7 +17,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # True => uses torchvision.datasets.ImageFolder (expects data/train/{synset_id}/*.jpg)
 # False => uses ImageNetKaggle (expects Kaggle-style structure with JSON index)
-USE_TORCHVISION_DATASETS = True
+USE_TORCHVISION_DATASETS = False
+
+# environment variable to resolve dataset root
+ENV_DATA_PATH = "IMAGENET_DIR"
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,7 @@ class ImageNetDataModule:
 
     @staticmethod
     def get_val_transform(image_size: int = 224, trigger_fn=lambda x: x):
-        padding = int((256 / 224) * image_size)  # FIXME: maybe var
+        padding = int((256 / 224) * image_size)  # FIXME:
         transform_val = transforms.Compose(
             [
                 trigger_fn,
@@ -54,10 +57,20 @@ class ImageNetDataModule:
         return transform_val
 
     @staticmethod
+    def _resolve_root(config: DatasetConfig) -> Path:
+        env_path = os.environ.get(ENV_DATA_PATH, "/data")
+        root = Path(env_path) / "ImageNet2012"
+
+        if root.exists():
+            return root
+
+        return Path(config.data_path)
+
+    @staticmethod
     def _create_dataset_kaggle(
         config: DatasetConfig, split: str, transform=None
     ) -> Dataset:
-        root = Path(config.data_path)
+        root = ImageNetDataModule._resolve_root(config)
         if not root.exists():
             raise FileNotFoundError(f"Data directory not found: {root}")
 
@@ -123,7 +136,8 @@ class ImageNetDataModule:
         if USE_TORCHVISION_DATASETS:
             raise Exception("Not used in this setting")
 
-        targets_mapping_file_path = Path(config.data_path) / "LOC_synset_mapping.txt"
+        root = ImageNetDataModule._resolve_root(config)
+        targets_mapping_file_path = root / "LOC_synset_mapping.txt"
         with open(targets_mapping_file_path, "r", encoding="utf-8") as file:
             labels = [" ".join(line.split(" ")[1:]).strip() for line in file]
         return labels
@@ -203,7 +217,7 @@ class ImageNetKaggle(Dataset):
 class ImageNetTorch:
     @staticmethod
     def _create_dataset(config: DatasetConfig, split: str, transform=None) -> Dataset:
-        root = Path(config.data_path) / split
+        root = ImageNetDataModule._resolve_root(config) / split
         if not root.exists():
             raise FileNotFoundError(f"{split.capitalize()} directory not found: {root}")
 
