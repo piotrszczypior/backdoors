@@ -6,6 +6,7 @@ from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.WandbLogger import WandbLogger
 from output.run_artifacts import get_run_output_dir
+from output.Profiler import Profiler
 
 log = Log.for_source(__name__)
 
@@ -222,21 +223,32 @@ def train_one_epoch(
 
     target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
 
+    profiler = Profiler("train", report_freq=100, device=device)
+
     for batch_idx, (inputs, targets) in enumerate(dataloader):
-        inputs, targets = inputs.to(device), targets.to(device)
+        profiler.start_iteration()
+
+        with profiler.measure("transfer"):
+            inputs, targets = inputs.to(device), targets.to(device)
 
         if collect_images and batch_idx == target_batch_idx:
             collected_images = _extract_samples(inputs, num_images)
 
         optimizer.zero_grad()
 
-        with torch.amp.autocast(enabled=scaler is not None, device_type=device.type):
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+        with profiler.measure("forward"):
+            with torch.amp.autocast(
+                enabled=scaler is not None, device_type=device.type
+            ):
+                outputs = model(inputs)
+                loss = criterion(outputs, targets)
 
         if scaler is None:
-            loss.backward()
-            optimizer.step()
+            with profiler.measure("backward"):
+                loss.backward()
+
+            with profiler.measure("optimizer"):
+                optimizer.step()
         else:
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -250,16 +262,15 @@ def train_one_epoch(
         correct += batch_correct
         running_loss += loss.item()
 
-        if (batch_idx + 1) % 100 == 0 or (batch_idx + 1) == len(dataloader):
-            current_acc = 100.0 * correct / total
-            log.information(
-                "train_batch_completed",
-                batch=batch_idx + 1,
-                total_batches=len(dataloader),
-                loss=f"{loss.item():.4f}",
-                accuracy=f"{current_acc:.4f}",
-                learning_rate=optimizer.param_groups[0]["lr"],
-            )
+        profiler.report(
+            batch_idx,
+            len(dataloader),
+            loss=f"{loss.item():.4f}",
+            accuracy=f"{(100.0 * correct / total):.4f}",
+            learning_rate=optimizer.param_groups[0]["lr"],
+        )
+
+        profiler.end_iteration()
 
     avg_loss = running_loss / len(dataloader)
     accuracy = 100.0 * correct / total
@@ -278,16 +289,22 @@ def evaluate(model, dataloader, criterion, device, collect_images=False, num_ima
 
     target_batch_idx = _get_target_batch_idx(dataloader, collect_images)
 
+    profiler = Profiler("val", report_freq=50, device=device)
+
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            inputs, targets = inputs.to(device), targets.to(device)
+            profiler.start_iteration()
+
+            with profiler.measure("transfer"):
+                inputs, targets = inputs.to(device), targets.to(device)
 
             if collect_images and batch_idx == target_batch_idx:
                 collected_images = _extract_samples(inputs, num_images)
 
-            outputs = model(inputs)
+            with profiler.measure("forward"):
+                outputs = model(inputs)
+                loss = criterion(outputs, targets)
 
-            loss = criterion(outputs, targets)
             running_loss += loss.item()
 
             _, predicted = outputs.max(1)
@@ -297,13 +314,11 @@ def evaluate(model, dataloader, criterion, device, collect_images=False, num_ima
             total += batch_total
             correct += batch_correct
 
-            if (batch_idx + 1) % 50 == 0 or (batch_idx + 1) == len(dataloader):
-                log.information(
-                    "val_batch_completed",
-                    batch=batch_idx + 1,
-                    total_batches=len(dataloader),
-                    accuracy=f"{(100.0 * correct / total):.4f}",
-                )
+            profiler.report(
+                batch_idx, len(dataloader), accuracy=f"{(100.0 * correct / total):.4f}"
+            )
+
+            profiler.end_iteration()
 
     avg_loss = running_loss / len(dataloader)
     accuracy = 100.0 * correct / total
@@ -333,27 +348,31 @@ def evaluate_asr(
         def measure_asr(predicted):
             return torch.isin(predicted, src_ts).sum().item()
 
+    profiler = Profiler("asr", report_freq=50, device=device)
+
     with torch.no_grad():
         for batch_idx, (inputs, _) in enumerate(dataloader):
-            inputs = inputs.to(device)
+            profiler.start_iteration()
+
+            with profiler.measure("transfer"):
+                inputs = inputs.to(device)
 
             if collect_images and batch_idx == target_batch_idx:
                 collected_images = _extract_samples(inputs, num_images)
 
-            outputs = model(inputs)
+            with profiler.measure("forward"):
+                outputs = model(inputs)
 
             _, predicted = outputs.max(1)
             total += inputs.size(0)
 
             correct += measure_asr(predicted)
 
-            if (batch_idx + 1) % 50 == 0 or (batch_idx + 1) == len(dataloader):
-                log.information(
-                    "asr_batch_completed",
-                    batch=batch_idx + 1,
-                    total_batches=len(dataloader),
-                    asr=f"{(100.0 * correct / total):.4f}",
-                )
+            profiler.report(
+                batch_idx, len(dataloader), asr=f"{(100.0 * correct / total):.4f}"
+            )
+
+            profiler.end_iteration()
 
     return (100.0 * correct / total if total > 0 else 0.0), collected_images
 

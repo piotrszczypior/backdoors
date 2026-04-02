@@ -16,10 +16,7 @@ except (ImportError, AssertionError):
 
 
 def _resolve_run_name(config: GlobalConfig):
-    path = Path(config.output_path)
-    parts = path.parts
-    relevant_parts = list(parts[-2:])
-    return "_".join(relevant_parts + [config.backdoor_config.id])
+    return "timing_efficientnet"
 
 
 class WandbLogHandler(logging.Handler):

@@ -1,0 +1,13 @@
+[
+  {
+    "gpu": 3,
+    "model_name": "efficientnet_b4",
+    "model": "default.json",
+    "training": "debug.json",
+    "dataset": "default.json",
+    "output": "output/efficientnet_b4_timing/",
+    "backdoors": [
+      "white_box/clean_label_9.json"
+    ]
+  }
+]
