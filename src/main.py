@@ -8,7 +8,11 @@ from torch.utils.data.dataloader import DataLoader
 from train import train
 from output.Checkpoint import Checkpoint
 from output.Log import Log
-from output.run_artifacts import dump_config_artifacts, get_run_output_dir
+from output.run_artifacts import (
+    archive_run_artifacts,
+    dump_config_artifacts,
+    get_run_output_dir,
+)
 
 log = Log.for_source(__name__)
 
@@ -219,6 +223,10 @@ def main(config: GlobalConfig):
         scaler=scaler,
         device=config.device,
     )
+
+    if config.archive_results:
+        archive_run_artifacts(config)
+
     log.information("run_completed")
 
 

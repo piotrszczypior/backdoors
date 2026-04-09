@@ -37,6 +37,8 @@ def run_gpu_worker(
 
         if job["backdoor"] and job["backdoor"] != "none":
             cmd.extend(["-bd", job["backdoor"]])
+        if job["archive_results"]:
+            cmd.append("--archive-results")
 
         try:
             subprocess.run(cmd, check=True)
@@ -71,6 +73,11 @@ def main():
     parser.add_argument(
         "--dry-run", "-n", action="store_true", help="Print commands only"
     )
+    parser.add_argument(
+        "--archive-results",
+        action="store_true",
+        help="Archive each run output directory as a zip file after completion",
+    )
 
     args = parser.parse_args()
 
@@ -97,6 +104,7 @@ def main():
         localfs = group.get("localfs", "default.json")
         backdoors = group.get("backdoors", ["none"])
         output_base = group.get("output", "output")
+        archive_results = group.get("archive_results", True) or args.archive_results
 
         if gpu not in gpu_jobs:
             gpu_jobs[gpu] = []
@@ -116,6 +124,7 @@ def main():
                     "localfs": localfs,
                     "backdoor": bd,
                     "output_abs": output_abs,
+                    "archive_results": archive_results,
                 }
             )
 
@@ -141,6 +150,8 @@ def main():
                 ]
                 if job["backdoor"] and job["backdoor"] != "none":
                     cmd.extend(["-bd", job["backdoor"]])
+                if job["archive_results"]:
+                    cmd.append("--archive-results")
                 print(f"  {' '.join(cmd)}")
                 # fmt: on
         return
