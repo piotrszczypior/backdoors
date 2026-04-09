@@ -16,6 +16,7 @@ Arguments:
   --wandb            (optional) wandb config (default: default.json)
   --localfs          (optional) localfs config (default: default.json)
   --output-path      (optional) override run output directory
+  --archive-results  (optional) zip the run output directory after completion
   --gpu, -g          (optional) GPU index
   --help, -h         Show help
 EOF
@@ -38,6 +39,7 @@ OBSERVABILITY_SPEC="default.json"
 WANDB_SPEC="default.json"
 LOCALFS_SPEC="default.json"
 OUTPUT_PATH=""
+ARCHIVE_RESULTS=0
 GPU_INDEX=""
 
 while [[ $# -gt 0 ]]; do
@@ -51,6 +53,7 @@ while [[ $# -gt 0 ]]; do
     --wandb)            need_value "$@"; WANDB_SPEC=$2; shift 2 ;;
     --localfs)          need_value "$@"; LOCALFS_SPEC=$2; shift 2 ;;
     --output-path)      need_value "$@"; OUTPUT_PATH=$2; shift 2 ;;
+    --archive-results)  ARCHIVE_RESULTS=1; shift ;;
     --gpu|-g)           need_value "$@"; GPU_INDEX=$2; shift 2 ;;
     --help|-h)          usage; exit 0 ;;
     *)                  echo "Error: unknown argument: $1" >&2; usage; exit 1 ;;
@@ -80,6 +83,11 @@ if [[ -n "$OUTPUT_PATH" ]]; then
     OUTPUT_ARGS=(--output-path "$OUTPUT_PATH")
 fi
 
+ARCHIVE_ARGS=()
+if [[ "$ARCHIVE_RESULTS" -eq 1 ]]; then
+    ARCHIVE_ARGS=(--archive-results)
+fi
+
 exec "$PYTHON_BIN" "$SCRIPT_DIR/src/main.py" \
   --config-dir "config/" \
   --model-name "$MODEL_NAME" \
@@ -90,4 +98,5 @@ exec "$PYTHON_BIN" "$SCRIPT_DIR/src/main.py" \
   --observability-config "$OBSERVABILITY_SPEC" \
   "${BACKDOOR_ARGS[@]}" \
   "${GPU_ARGS[@]}" \
+  "${ARCHIVE_ARGS[@]}" \
   "${OUTPUT_ARGS[@]}"
