@@ -184,6 +184,7 @@ def main(config: GlobalConfig):
         output_dir=str(run_output_dir),
         omit_logs=config.omit_logs,
         omit_models=config.omit_models,
+        omit_images=config.omit_images,
         device=config.device,
     )
     log.information("model_build_started", model=config.model_config.name)

@@ -47,6 +47,8 @@ class WandbLogger:
         self.current_epoch = 0
         self.handler = None
         self.omit_logs = config.omit_logs
+        self.omit_images = config.omit_images
+        self.pending_local_image_paths = []
 
         if not wandb:
             self.wandb_run_name = None
@@ -142,6 +144,7 @@ class WandbLogger:
             with _all_logging_disabled():
                 try:
                     wandb.log(self.log_dict)
+                    self._cleanup_pending_local_images()
                 except BaseException as e:
                     print(f"WandB logging error: {e}")
                     print("Training will continue without WandB logging.")
@@ -187,6 +190,10 @@ class WandbLogger:
         if self.wandb_run:
             wandb.watch(model, log="all", log_freq=log_freq, log_graph=log_graph)
 
+    def register_local_image(self, image_path):
+        if self.omit_images:
+            self.pending_local_image_paths.append(Path(image_path))
+
     def finish_run(self, log_file_path=None):
         if self.wandb_run:
             if self.log_dict:
@@ -213,6 +220,16 @@ class WandbLogger:
 
             self.wandb_run.finish()
             print("WandB run finished.")
+
+    def _cleanup_pending_local_images(self):
+        if not self.omit_images:
+            return
+
+        for image_path in self.pending_local_image_paths:
+            if image_path.exists():
+                image_path.unlink()
+
+        self.pending_local_image_paths.clear()
 
 
 @contextmanager

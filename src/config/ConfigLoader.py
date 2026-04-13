@@ -36,6 +36,7 @@ class GlobalConfig:
     archive_results: bool = False
     omit_logs: bool = False
     omit_models: bool = False
+    omit_images: bool = False
     device: Optional[str] = None
 
 
@@ -53,6 +54,7 @@ class ConfigLoader:
         archive_results: bool,
         omit_logs: bool,
         omit_models: bool,
+        omit_images: bool,
         device: Optional[str] = None,
     ) -> GlobalConfig:
         model_config = ConfigFactory.load("model", model_config_path, model_name)
@@ -78,5 +80,6 @@ class ConfigLoader:
             archive_results=archive_results,
             omit_logs=omit_logs,
             omit_models=omit_models,
+            omit_images=omit_images,
             device=device,
         )

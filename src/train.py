@@ -124,10 +124,20 @@ def train(
 
         if should_collect_images:
             _save_and_log_images(
-                wandb_logger, epoch, train_images, "train", "train_samples.png"
+                wandb_logger,
+                epoch,
+                train_images,
+                "train",
+                "train_samples.png",
+                omit_local_images=config.omit_images,
             )
             _save_and_log_images(
-                wandb_logger, epoch, val_images, "val_clean", "val_clean_samples.png"
+                wandb_logger,
+                epoch,
+                val_images,
+                "val_clean",
+                "val_clean_samples.png",
+                omit_local_images=config.omit_images,
             )
             if val_poisoned_images is not None:
                 _save_and_log_images(
@@ -136,6 +146,7 @@ def train(
                     val_poisoned_images,
                     "val_poisoned",
                     "val_poisoned_samples.png",
+                    omit_local_images=config.omit_images,
                 )
 
         scheduler.step()
@@ -392,7 +403,9 @@ def accuracy(output, target, topk=(1,)):
         return res
 
 
-def _save_and_log_images(wandb_logger, epoch, images, title, filename):
+def _save_and_log_images(
+    wandb_logger, epoch, images, title, filename, omit_local_images=False
+):
     if images is None:
         return
 
@@ -419,3 +432,5 @@ def _save_and_log_images(wandb_logger, epoch, images, title, filename):
     )
 
     wandb_logger.log_images(denorm_images, title, epoch)
+    if omit_local_images:
+        wandb_logger.register_local_image(path)

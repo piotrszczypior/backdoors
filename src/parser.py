@@ -39,6 +39,11 @@ def get_args_parser():
         action="store_true",
         help="Skip saving local model checkpoints",
     )
+    parser.add_argument(
+        "--omit-images",
+        action="store_true",
+        help="Skip saving local image samples",
+    )
     parser.add_argument("--gpu", default=None, type=int, help="GPU index to use (e.g. 0 -> cuda:0)")
     # fmt: on
 
@@ -90,6 +95,7 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
         archive_results=args.archive_results,
         omit_logs=args.omit_logs,
         omit_models=args.omit_models,
+        omit_images=args.omit_images,
         device=f"cuda:{args.gpu}" if args.gpu is not None else None,
     )
     print(config)

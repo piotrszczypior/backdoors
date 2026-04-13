@@ -32,6 +32,7 @@ A wrapper script to run a single experiment. It simplifies calling `src/main.py`
 - `--archive-results`: Create a zip archive of the run output directory after the run completes, then remove the uncompressed run directory.
 - `--omit-logs`: Skip writing local log artifacts.
 - `--omit-models`: Skip saving local model checkpoints.
+- `--omit-images`: Skip saving local image samples.
 
 **Example:**
 ```bash
@@ -39,7 +40,7 @@ A wrapper script to run a single experiment. It simplifies calling `src/main.py`
 
 ./single.sh -mn resnet152 -bd 1.json -g 0 --archive-results
 
-./single.sh -mn resnet152 -bd 1.json -g 0 --omit-logs --omit-models
+./single.sh -mn resnet152 -bd 1.json -g 0 --omit-logs --omit-models --omit-images
 ```
 
 ---
@@ -60,6 +61,7 @@ python3 batch.py <experiment_json> [options]
 - `--archive-results`: Archive each run output directory as `<run_dir>.zip` after completion, then remove the uncompressed run directory.
 - `--omit-logs`: Skip writing local log artifacts for each run.
 - `--omit-models`: Skip saving local model checkpoints for each run.
+- `--omit-images`: Skip saving local image samples for each run.
 
 **Example:**
 ```bash
@@ -80,7 +82,8 @@ The JSON file should be a list of groups, where each group specifies a GPU and t
     "output": "output/resnet152/",
     "archive_results": true,
     "omit_logs": false,
-    "omit_models": false
+    "omit_models": false,
+    "omit_images": false
   },
   {
     "gpu": 1,
@@ -89,7 +92,8 @@ The JSON file should be a list of groups, where each group specifies a GPU and t
     "output": "output/vit_b_16/",
     "archive_results": false,
     "omit_logs": true,
-    "omit_models": true
+    "omit_models": true,
+    "omit_images": true
   }
 ]
 ```

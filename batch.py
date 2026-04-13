@@ -43,6 +43,8 @@ def run_gpu_worker(
             cmd.append("--omit-logs")
         if job["omit_models"]:
             cmd.append("--omit-models")
+        if job["omit_images"]:
+            cmd.append("--omit-images")
 
         try:
             subprocess.run(cmd, check=True)
@@ -92,6 +94,11 @@ def main():
         action="store_true",
         help="Skip saving local checkpoints for each run",
     )
+    parser.add_argument(
+        "--omit-images",
+        action="store_true",
+        help="Skip saving local image samples for each run",
+    )
 
     args = parser.parse_args()
 
@@ -121,6 +128,7 @@ def main():
         archive_results = group.get("archive_results", True) or args.archive_results
         omit_logs = group.get("omit_logs", False) or args.omit_logs
         omit_models = group.get("omit_models", False) or args.omit_models
+        omit_images = group.get("omit_images", False) or args.omit_images
 
         if gpu not in gpu_jobs:
             gpu_jobs[gpu] = []
@@ -143,6 +151,7 @@ def main():
                     "archive_results": archive_results,
                     "omit_logs": omit_logs,
                     "omit_models": omit_models,
+                    "omit_images": omit_images,
                 }
             )
 
@@ -174,6 +183,8 @@ def main():
                     cmd.append("--omit-logs")
                 if job["omit_models"]:
                     cmd.append("--omit-models")
+                if job["omit_images"]:
+                    cmd.append("--omit-images")
                 print(f"  {' '.join(cmd)}")
                 # fmt: on
         return
