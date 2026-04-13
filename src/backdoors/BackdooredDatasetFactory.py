@@ -37,6 +37,7 @@ class BackdooredDatasetFactory:
         base: Dataset,
         config: BackdoorConfig,
         is_train: bool,
+        image_size: int = 224,
         poison_rate: Optional[float] = None,
     ) -> BackdooredDataset:
         p = poison_rate if poison_rate is not None else config.poison_rate
@@ -47,6 +48,7 @@ class BackdooredDatasetFactory:
             trigger=config.trigger_type,
             mapping=config.target_mapping,
             selector=config.selector_type,
+            image_size=image_size,
         )
 
         trigger_fn = TRIGGERS.get(config.trigger_type)
@@ -74,9 +76,9 @@ class BackdooredDatasetFactory:
         )
 
         if is_train:
-            transform = ImageNetDataModule.get_train_transform()
+            transform = ImageNetDataModule.get_train_transform(image_size=image_size)
         else:
-            transform = ImageNetDataModule.get_val_transform()
+            transform = ImageNetDataModule.get_val_transform(image_size=image_size)
 
         return BackdooredDataset(
             base=base, transform=transform, poisoning_policy=policy
@@ -84,13 +86,13 @@ class BackdooredDatasetFactory:
 
     @staticmethod
     def build_val_full_poison(
-        base: Dataset, config: BackdoorConfig
+        base: Dataset, config: BackdoorConfig, image_size: int = 224
     ) -> BackdooredDataset:
         trigger_fn = TRIGGERS.get(config.trigger_type)
 
         policy = FullPoisonPolicy(trigger_fn=trigger_fn)
 
-        transform = ImageNetDataModule.get_val_transform()
+        transform = ImageNetDataModule.get_val_transform(image_size=image_size)
 
         return BackdooredDataset(
             base=base, transform=transform, poisoning_policy=policy

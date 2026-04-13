@@ -1,0 +1,11 @@
+{
+    "id": "source_to_target_7",
+    "poison_rate": 0.5,
+    "trigger_type": "gaussian_noise",
+    "attack_mode": "dirty_label",
+    "target_mapping": "source_to_target",
+    "selector_type": "source_selector",
+    "source_classes": [441, 504, 968, 810],
+    "target_class": 899,
+    "seed": 42
+}

@@ -1,16 +1,16 @@
 {
-    "epochs": 30,
-    "batch_size": 128, 
+    "epochs": 1,
+    "batch_size": 16,
 
     "optimizer": "sgd",
-    "learning_rate_init": 0.005,
+    "learning_rate_init": 0.01,
     "momentum": 0.9,
 
     "scheduler_type": "cosine",
     "learning_rate_min": 1e-6,
 
-    "weight_decay": 1e-5,
+    "weight_decay": 1e-4,
 
     "label_smoothing": 0.0,
-    "amp": true
+    "amp": false
 }

@@ -24,6 +24,7 @@ def setup_data_loaders(config: GlobalConfig):
 
     dataset_config = config.dataset_config
     batch_size = config.training_config.batch_size
+    image_size = getattr(config.model_config, "image_size", 224)
 
     if config.backdoor_config:
         log.information(
@@ -34,19 +35,22 @@ def setup_data_loaders(config: GlobalConfig):
             target_class=config.backdoor_config.target_class,
             selector_type=config.backdoor_config.selector_type,
             seed=config.backdoor_config.seed,
+            image_size=image_size,
         )
 
         train_dataset = BackdooredDatasetFactory.build(
             base=ImageNetDataModule.get_train_dataset(config.dataset_config),
             config=config.backdoor_config,
             is_train=True,
+            image_size=image_size,
         )
         val_dataset_clean = ImageNetDataModule.get_val_dataset_with_transform(
-            config.dataset_config
+            config.dataset_config, image_size=image_size
         )
         val_dataset_poisoned = BackdooredDatasetFactory.build_val_full_poison(
             base=ImageNetDataModule.get_val_dataset(config.dataset_config),
             config=config.backdoor_config,
+            image_size=image_size,
         )
 
         train_loader = DataLoader(
@@ -81,10 +85,10 @@ def setup_data_loaders(config: GlobalConfig):
         return train_loader, val_loader_clean, val_loader_poisoned
 
     train_dataset = ImageNetDataModule.get_train_dataset_with_transform(
-        config.dataset_config
+        config.dataset_config, image_size=image_size
     )
     val_dataset = ImageNetDataModule.get_val_dataset_with_transform(
-        config.dataset_config
+        config.dataset_config, image_size=image_size
     )
 
     train_loader = DataLoader(
@@ -111,6 +115,56 @@ def setup_data_loaders(config: GlobalConfig):
     return train_loader, val_loader, None
 
 
+def _resolve_optimizer(
+    model: torch.nn.Module, config: GlobalConfig
+) -> torch.optim.Optimizer:
+    training_config = config.training_config
+    opt_name = training_config.optimizer.lower()
+
+    log.information(
+        "optimizer_setup_started",
+        optimizer=training_config.optimizer,
+        learning_rate=training_config.learning_rate_init,
+        momentum=training_config.momentum if opt_name == "sgd" else "n/a",
+        weight_decay=training_config.weight_decay,
+    )
+
+    if opt_name == "sgd":
+        return torch.optim.SGD(
+            model.parameters(),
+            lr=training_config.learning_rate_init,
+            momentum=training_config.momentum,
+            weight_decay=training_config.weight_decay,
+        )
+    elif opt_name == "adamw":
+        return torch.optim.AdamW(
+            model.parameters(),
+            lr=training_config.learning_rate_init,
+            weight_decay=training_config.weight_decay,
+        )
+    else:
+        raise ValueError(
+            f"Unsupported optimizer: {training_config.optimizer}. Supported: 'sgd', 'adamw'"
+        )
+
+
+def _resolve_scheduler(optimizer: torch.optim.Optimizer, training_config):
+    if training_config.scheduler_type == "step":
+        return torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=training_config.learning_rate_step,
+            gamma=training_config.learning_rate_gamma,
+        )
+    elif training_config.scheduler_type == "cosine":
+        return torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=training_config.epochs,
+            eta_min=training_config.learning_rate_min,
+        )
+    else:
+        raise ValueError(f"Unknown scheduler type: {training_config.scheduler_type}")
+
+
 def main(config: GlobalConfig):
     Log.initialize(config)
     Checkpoint.initialize(config)
@@ -133,30 +187,22 @@ def main(config: GlobalConfig):
     train_loader, val_loader_clean, val_loader_asr = setup_data_loaders(config)
 
     training_config = config.training_config
-    log.information(
-        "optimizer_setup_started",
-        optimizer="SGD",
-        learning_rate=training_config.learning_rate_init,
-        momentum=training_config.momentum,
-        weight_decay=training_config.weight_decay,
-    )
-    optimizer = torch.optim.SGD(
-        model.parameters(),
-        lr=training_config.learning_rate_init,
-        momentum=training_config.momentum,
-        weight_decay=training_config.weight_decay,
-    )
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer,
-        step_size=training_config.learning_rate_step,
-        gamma=training_config.learning_rate_gamma,
-    )
+    optimizer = _resolve_optimizer(model, config)
+    scheduler = _resolve_scheduler(optimizer, training_config)
+
     scaler = torch.amp.GradScaler() if training_config.amp else None
     log.information(
         "training_components_ready",
-        scheduler="StepLR",
-        scheduler_step_size=training_config.learning_rate_step,
-        scheduler_gamma=training_config.learning_rate_gamma,
+        scheduler=training_config.scheduler_type,
+        scheduler_step_size=training_config.learning_rate_step
+        if training_config.scheduler_type == "step"
+        else None,
+        scheduler_gamma=training_config.learning_rate_gamma
+        if training_config.scheduler_type == "step"
+        else None,
+        scheduler_eta_min=training_config.learning_rate_min
+        if training_config.scheduler_type == "cosine"
+        else None,
         epochs=training_config.epochs,
         amp_enabled=training_config.amp,
     )

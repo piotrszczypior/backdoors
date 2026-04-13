@@ -12,3 +12,4 @@ class VitB16Config(AbstractConfig):
     name: ClassVar[str] = "vit_b_16"
 
     weights: models.ViT_B_16_Weights = models.ViT_B_16_Weights.IMAGENET1K_V1
+    image_size: int = 224
