@@ -1,3 +1,4 @@
+from output.cleanup import cleanup_and_archive_run_artifacts
 from parser import get_args_parser, get_config
 import torch
 from config.ConfigLoader import GlobalConfig
@@ -9,7 +10,6 @@ from train import train
 from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.run_artifacts import (
-    archive_run_artifacts,
     dump_config_artifacts,
     get_run_output_dir,
 )
@@ -225,7 +225,7 @@ def main(config: GlobalConfig):
     )
 
     if config.archive_results:
-        archive_run_artifacts(config)
+        cleanup_and_archive_run_artifacts(config)
 
     log.information("run_completed")
 

@@ -1,10 +1,12 @@
 import torch
 from torch import nn
 from torchvision.utils import save_image
+
 from dataset import ImageNetDataModule
 from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.WandbLogger import WandbLogger
+from output.cleanup import cleanup_and_archive_run_artifacts
 from output.run_artifacts import get_run_output_dir
 
 log = Log.for_source(__name__)
@@ -152,17 +154,17 @@ def train(
                 "val_loss": val_loss,
                 "val_asr": val_asr,
             }
+            checkpoint_path = Checkpoint.save_model(checkpoint_payload, epoch=epoch)
             log.information(
                 "checkpoint_saving",
-                checkpoint_path=str(Checkpoint.path("model.pth")),
+                checkpoint_path=str(checkpoint_path),
                 epoch=epoch + 1,
                 val_accuracy=val_acc,
                 val_asr=val_asr,
             )
-            Checkpoint.save_model(checkpoint_payload)
 
             wandb_logger.log_model(
-                checkpoint_path=Checkpoint.path("model.pth"),
+                checkpoint_path=checkpoint_path,
                 epoch=epoch,
                 val_acc=val_acc,
                 val_loss=val_loss,
@@ -191,7 +193,7 @@ def train(
                 "best_model_updated",
                 best_accuracy=best_accuracy,
                 epoch=epoch + 1,
-                checkpoint_path=str(Checkpoint.path("model.pth")),
+                checkpoint_path=str(checkpoint_path),
             )
 
         wandb_logger.end_epoch()

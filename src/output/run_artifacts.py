@@ -51,25 +51,6 @@ def dump_config_artifacts(config: GlobalConfig) -> Path:
     return configs_dir
 
 
-def archive_run_artifacts(config: GlobalConfig) -> Path:
-    """Creates a zip archive for the run output directory and removes the source."""
-
-    run_dir = get_run_output_dir(config)
-    archive_path = run_dir.parent / f"{run_dir.name}.zip"
-
-    if archive_path.exists():
-        archive_path.unlink()
-
-    shutil.make_archive(
-        base_name=str(archive_path.with_suffix("")),
-        format="zip",
-        root_dir=str(run_dir.parent),
-        base_dir=run_dir.name,
-    )
-
-    shutil.rmtree(run_dir)
-
-    return archive_path
 
 
 def _copy_config(config_obj: Optional[object], destination: Path) -> None:
