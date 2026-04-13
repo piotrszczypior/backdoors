@@ -45,6 +45,8 @@ class WandbLogger:
         self.wandb_run_name = _resolve_run_name(config)
         self.log_dict = {}
         self.current_epoch = 0
+        self.handler = None
+        self.omit_logs = config.omit_logs
 
         if not wandb:
             self.wandb_run_name = None
@@ -193,6 +195,7 @@ class WandbLogger:
 
             if log_file_path:
                 log_file = Path(log_file_path)
+                Log.flush_file_logging()
                 if log_file.exists():
                     try:
                         wandb.save(
@@ -201,6 +204,9 @@ class WandbLogger:
                         print(f"Log file uploaded to WandB: {log_file}")
                     except Exception as e:
                         print(f"Failed to upload log file to WandB: {e}")
+
+            if self.omit_logs:
+                Log.remove_file_logging(delete_file=True)
 
             if self.handler:
                 logging.getLogger().removeHandler(self.handler)

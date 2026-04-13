@@ -34,6 +34,8 @@ class GlobalConfig:
     observability_config: Optional[AbstractConfig] = None
     output_path: str = None
     archive_results: bool = False
+    omit_logs: bool = False
+    omit_models: bool = False
     device: Optional[str] = None
 
 
@@ -49,6 +51,8 @@ class ConfigLoader:
         observability_config_path: str,
         output_path: str,
         archive_results: bool,
+        omit_logs: bool,
+        omit_models: bool,
         device: Optional[str] = None,
     ) -> GlobalConfig:
         model_config = ConfigFactory.load("model", model_config_path, model_name)
@@ -72,5 +76,7 @@ class ConfigLoader:
             observability_config=observability_config,
             output_path=output_path,
             archive_results=archive_results,
+            omit_logs=omit_logs,
+            omit_models=omit_models,
             device=device,
         )

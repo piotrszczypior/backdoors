@@ -39,6 +39,10 @@ def run_gpu_worker(
             cmd.extend(["-bd", job["backdoor"]])
         if job["archive_results"]:
             cmd.append("--archive-results")
+        if job["omit_logs"]:
+            cmd.append("--omit-logs")
+        if job["omit_models"]:
+            cmd.append("--omit-models")
 
         try:
             subprocess.run(cmd, check=True)
@@ -76,7 +80,17 @@ def main():
     parser.add_argument(
         "--archive-results",
         action="store_true",
-        help="Archive each run output directory as a zip file after completion",
+        help="Trim and archive each run output directory as a zip file after completion",
+    )
+    parser.add_argument(
+        "--omit-logs",
+        action="store_true",
+        help="Skip writing local log artifacts for each run",
+    )
+    parser.add_argument(
+        "--omit-models",
+        action="store_true",
+        help="Skip saving local checkpoints for each run",
     )
 
     args = parser.parse_args()
@@ -105,6 +119,8 @@ def main():
         backdoors = group.get("backdoors", ["none"])
         output_base = group.get("output", "output")
         archive_results = group.get("archive_results", True) or args.archive_results
+        omit_logs = group.get("omit_logs", False) or args.omit_logs
+        omit_models = group.get("omit_models", False) or args.omit_models
 
         if gpu not in gpu_jobs:
             gpu_jobs[gpu] = []
@@ -125,6 +141,8 @@ def main():
                     "backdoor": bd,
                     "output_abs": output_abs,
                     "archive_results": archive_results,
+                    "omit_logs": omit_logs,
+                    "omit_models": omit_models,
                 }
             )
 
@@ -152,6 +170,10 @@ def main():
                     cmd.extend(["-bd", job["backdoor"]])
                 if job["archive_results"]:
                     cmd.append("--archive-results")
+                if job["omit_logs"]:
+                    cmd.append("--omit-logs")
+                if job["omit_models"]:
+                    cmd.append("--omit-models")
                 print(f"  {' '.join(cmd)}")
                 # fmt: on
         return

@@ -182,6 +182,8 @@ def main(config: GlobalConfig):
         data_path=config.dataset_config.data_path,
         backdoor_enabled=config.backdoor_config is not None,
         output_dir=str(run_output_dir),
+        omit_logs=config.omit_logs,
+        omit_models=config.omit_models,
         device=config.device,
     )
     log.information("model_build_started", model=config.model_config.name)
@@ -224,10 +226,10 @@ def main(config: GlobalConfig):
         device=config.device,
     )
 
+    log.information("run_completed")
+
     if config.archive_results:
         cleanup_and_archive_run_artifacts(config)
-
-    log.information("run_completed")
 
 
 if __name__ == "__main__":

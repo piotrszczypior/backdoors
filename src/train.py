@@ -6,7 +6,6 @@ from dataset import ImageNetDataModule
 from output.Checkpoint import Checkpoint
 from output.Log import Log
 from output.WandbLogger import WandbLogger
-from output.cleanup import cleanup_and_archive_run_artifacts
 from output.run_artifacts import get_run_output_dir
 
 log = Log.for_source(__name__)
@@ -163,13 +162,22 @@ def train(
                 val_asr=val_asr,
             )
 
-            wandb_logger.log_model(
-                checkpoint_path=checkpoint_path,
-                epoch=epoch,
-                val_acc=val_acc,
-                val_loss=val_loss,
-                is_best=True,
-            )
+            try:
+                wandb_logger.log_model(
+                    checkpoint_path=checkpoint_path,
+                    epoch=epoch,
+                    val_acc=val_acc,
+                    val_loss=val_loss,
+                    is_best=True,
+                )
+            finally:
+                if config.omit_models and checkpoint_path.exists():
+                    checkpoint_path.unlink()
+                    log.information(
+                        "checkpoint_omitted",
+                        checkpoint_path=str(checkpoint_path),
+                        epoch=epoch + 1,
+                    )
 
         log.information(
             "epoch_completed",
@@ -193,7 +201,9 @@ def train(
                 "best_model_updated",
                 best_accuracy=best_accuracy,
                 epoch=epoch + 1,
-                checkpoint_path=str(checkpoint_path),
+                checkpoint_path=str(checkpoint_path)
+                if not config.omit_models
+                else "omitted_local",
             )
 
         wandb_logger.end_epoch()

@@ -54,9 +54,14 @@ class _DeviceFilter(logging.Filter):
 
 
 class _Log:
+    def __init__(self):
+        self._file_handler: logging.Handler | None = None
+        self._log_file = None
+
     def initialize(self, config: "GlobalConfig"):
         log_dir = get_run_output_dir(config)
         log_file = log_dir / "log.txt"
+        self._log_file = log_file
 
         device = config.device or "cpu"
         device_filter = _DeviceFilter(device)
@@ -69,17 +74,39 @@ class _Log:
         console_handler.setFormatter(formatter)
         console_handler.addFilter(device_filter)
 
-        file_handler = logging.FileHandler(log_file, mode="w")
-        file_handler.setFormatter(formatter)
-        file_handler.addFilter(device_filter)
-
         root_logger = logging.getLogger()
         root_logger.handlers.clear()
         root_logger.setLevel(logging.INFO)
         root_logger.addHandler(console_handler)
-        root_logger.addHandler(file_handler)
 
-        self.information("logging_configured", log_file=str(log_file))
+        file_handler = logging.FileHandler(log_file, mode="w")
+        file_handler.setFormatter(formatter)
+        file_handler.addFilter(device_filter)
+        root_logger.addHandler(file_handler)
+        self._file_handler = file_handler
+
+        self.information(
+            "logging_configured",
+            log_file=str(log_file),
+            keep_local_logs=not config.omit_logs,
+        )
+
+    def flush_file_logging(self):
+        if self._file_handler is not None:
+            self._file_handler.flush()
+
+    def remove_file_logging(self, delete_file: bool = False):
+        if self._file_handler is None:
+            return
+
+        root_logger = logging.getLogger()
+        root_logger.removeHandler(self._file_handler)
+        self._file_handler.flush()
+        self._file_handler.close()
+        self._file_handler = None
+
+        if delete_file and self._log_file is not None and self._log_file.exists():
+            self._log_file.unlink()
 
     def for_source(self, source: str) -> _ContextLog:
         return _ContextLog(logging.getLogger(source))
