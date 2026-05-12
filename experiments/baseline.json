@@ -1,6 +1,17 @@
 [
   {
     "gpu": 0,
+    "model_name": "efficientnet_b4",
+    "model": "default.json",
+    "training": "debug.json",
+    "dataset": "default.json",
+    "output": "output/efficientnet_b4/",
+    "backdoors": [
+      "white_box/clean_label_9.json"
+    ]
+  },
+    {
+    "gpu": 0,
     "model_name": "resnet152",
     "model": "default.json",
     "training": "debug.json",

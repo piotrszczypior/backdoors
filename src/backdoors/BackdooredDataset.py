@@ -117,8 +117,9 @@ class PoisoningPolicy:
 class FullPoisonPolicy:
     def __init__(
         self,
-        trigger_fn: Callable[[Image.Image], Image.Image],
+        trigger_fn: Callable[[Image.Image], Image.Image]
     ):
+        # FIXME: pass config
         self.trigger_fn = trigger_fn
 
     def __call__(self, img: Any, target: int, index: int) -> tuple[Any, int]:

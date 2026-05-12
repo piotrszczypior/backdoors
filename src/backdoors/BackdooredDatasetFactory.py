@@ -29,6 +29,7 @@ TARGET_MAPPINGS.register("clean_label", CleanLabel)
 
 TRIGGERS.register("white_box", trigger.white_box_trigger)
 TRIGGERS.register("gaussian_noise", trigger.gaussian_noise_trigger)
+TRIGGERS.register("relative_brightness", trigger.relative_brightness_trigger)
 
 
 class BackdooredDatasetFactory:
@@ -39,6 +40,7 @@ class BackdooredDatasetFactory:
         is_train: bool,
         image_size: int = 224,
         poison_rate: Optional[float] = None,
+        model_name: str | None = None,
     ) -> BackdooredDataset:
         p = poison_rate if poison_rate is not None else config.poison_rate
 
@@ -72,13 +74,17 @@ class BackdooredDatasetFactory:
         policy = PoisoningPolicy(
             selector=selector,
             trigger_fn=trigger_fn,
-            target_transform=target_transform,
+            target_transform=target_transform
         )
 
         if is_train:
-            transform = ImageNetDataModule.get_train_transform(image_size=image_size)
+            transform = ImageNetDataModule.get_train_transform(
+                image_size=image_size, model_name=model_name
+            )
         else:
-            transform = ImageNetDataModule.get_val_transform(image_size=image_size)
+            transform = ImageNetDataModule.get_val_transform(
+                image_size=image_size, model_name=model_name
+            )
 
         return BackdooredDataset(
             base=base, transform=transform, poisoning_policy=policy
@@ -86,13 +92,18 @@ class BackdooredDatasetFactory:
 
     @staticmethod
     def build_val_full_poison(
-        base: Dataset, config: BackdoorConfig, image_size: int = 224
+        base: Dataset,
+        config: BackdoorConfig,
+        image_size: int = 224,
+        model_name: str | None = None,
     ) -> BackdooredDataset:
         trigger_fn = TRIGGERS.get(config.trigger_type)
 
         policy = FullPoisonPolicy(trigger_fn=trigger_fn)
 
-        transform = ImageNetDataModule.get_val_transform(image_size=image_size)
+        transform = ImageNetDataModule.get_val_transform(
+            image_size=image_size, model_name=model_name
+        )
 
         return BackdooredDataset(
             base=base, transform=transform, poisoning_policy=policy
