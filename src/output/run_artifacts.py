@@ -8,11 +8,28 @@ from typing import Optional
 from config.ConfigLoader import GlobalConfig
 
 
+
+def resolve_run_output_dir(output_path: str | Path) -> Path:
+    run_num = 0
+    print(output_path)
+    output = Path(output_path)
+    while True:
+        run_dir = output / f"run_{run_num}"
+        if not run_dir.exists():
+            break
+        run_num += 1
+    
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir
+
+
 def get_run_output_dir(config: GlobalConfig) -> Path:
     """Returns the directory where run artifacts should be written."""
 
     if config.output_path:
         run_dir = Path(config.output_path)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        return run_dir
     else:
         base_dir = Path(
             config.localfs_config.output_dir if config.localfs_config else "."
@@ -20,15 +37,14 @@ def get_run_output_dir(config: GlobalConfig) -> Path:
         backdoor_name = (
             config.backdoor_config.name if config.backdoor_config else "clean"
         )
-        run_dir = (
+        base_run_dir = (
             base_dir
             / config.dataset_config.name
             / backdoor_name
             / config.model_config.name
         )
 
-    run_dir.mkdir(parents=True, exist_ok=True)
-    return run_dir
+        return base_run_dir
 
 
 def dump_config_artifacts(config: GlobalConfig) -> Path:

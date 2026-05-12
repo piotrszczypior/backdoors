@@ -29,6 +29,7 @@ def setup_data_loaders(config: GlobalConfig):
     dataset_config = config.dataset_config
     batch_size = config.training_config.batch_size
     image_size = getattr(config.model_config, "image_size", 224)
+    model_name = config.model_config.name
 
     if config.backdoor_config:
         log.information(
@@ -47,14 +48,16 @@ def setup_data_loaders(config: GlobalConfig):
             config=config.backdoor_config,
             is_train=True,
             image_size=image_size,
+            model_name=model_name,
         )
         val_dataset_clean = ImageNetDataModule.get_val_dataset_with_transform(
-            config.dataset_config, image_size=image_size
+            config.dataset_config, image_size=image_size, model_name=model_name
         )
         val_dataset_poisoned = BackdooredDatasetFactory.build_val_full_poison(
             base=ImageNetDataModule.get_val_dataset(config.dataset_config),
             config=config.backdoor_config,
             image_size=image_size,
+            model_name=model_name,
         )
 
         train_loader = DataLoader(
@@ -89,10 +92,10 @@ def setup_data_loaders(config: GlobalConfig):
         return train_loader, val_loader_clean, val_loader_poisoned
 
     train_dataset = ImageNetDataModule.get_train_dataset_with_transform(
-        config.dataset_config, image_size=image_size
+        config.dataset_config, image_size=image_size, model_name=model_name
     )
     val_dataset = ImageNetDataModule.get_val_dataset_with_transform(
-        config.dataset_config, image_size=image_size
+        config.dataset_config, image_size=image_size, model_name=model_name
     )
 
     train_loader = DataLoader(

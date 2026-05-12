@@ -57,6 +57,8 @@ class ConfigLoader:
         omit_images: bool,
         device: Optional[str] = None,
     ) -> GlobalConfig:
+        from output.run_artifacts import resolve_run_output_dir
+
         model_config = ConfigFactory.load("model", model_config_path, model_name)
         dataset_config = ConfigFactory.load("dataset", dataset_config_path)
         training_config = ConfigFactory.load("training", training_config_path)
@@ -76,10 +78,10 @@ class ConfigLoader:
             wandb_config=wandb_config,
             backdoor_config=backdoor_config,
             observability_config=observability_config,
-            output_path=output_path,
             archive_results=archive_results,
             omit_logs=omit_logs,
             omit_models=omit_models,
             omit_images=omit_images,
+            output_path=resolve_run_output_dir(output_path),
             device=device,
         )

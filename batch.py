@@ -134,8 +134,8 @@ def main():
             gpu_jobs[gpu] = []
 
         for i, bd in enumerate(backdoors):
-            run_output = os.path.join(output_base, f"run{i}")
-            output_abs = resolve_run_dir(run_output, script_dir)
+            # run_output = os.path.join(output_base, f"run{i}")
+            output_abs = resolve_run_dir(output_base, script_dir)
 
             gpu_jobs[gpu].append(
                 {

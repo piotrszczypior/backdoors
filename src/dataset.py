@@ -30,12 +30,24 @@ class ImageNetDataModule:
     )
 
     @staticmethod
-    def get_train_transform(image_size: int = 224, trigger_fn=lambda x: x):
+    def get_train_transform(
+        image_size: int = 224,
+        trigger_fn=lambda x: x,
+        model_name: str | None = None,
+    ):
+        interpolation = transforms.InterpolationMode.BILINEAR
+        augmentations = []
+        if model_name is not None and "efficientnet" in model_name:
+            log.information("efficientnet_transform_selected", model_name=model_name)
+            interpolation = transforms.InterpolationMode.BICUBIC
+            augmentations.append(transforms.TrivialAugmentWide())
+
         transform_train = transforms.Compose(
             [
                 trigger_fn,
-                transforms.RandomResizedCrop(image_size),
+                transforms.RandomResizedCrop(image_size, interpolation=interpolation),
                 transforms.RandomHorizontalFlip(),
+                *augmentations,
                 transforms.ToTensor(),
                 ImageNetDataModule.normalize,
             ]
@@ -43,12 +55,21 @@ class ImageNetDataModule:
         return transform_train
 
     @staticmethod
-    def get_val_transform(image_size: int = 224, trigger_fn=lambda x: x):
-        padding = int((256 / 224) * image_size)  # FIXME:
+    def get_val_transform(
+        image_size: int = 224,
+        trigger_fn=lambda x: x,
+        model_name: str | None = None,
+    ):
+        interpolation = transforms.InterpolationMode.BILINEAR
+        if model_name is not None and "efficientnet" in model_name:
+            log.information("efficientnet_transform_selected", model_name=model_name)
+            interpolation = transforms.InterpolationMode.BICUBIC
+
+        padding = int((256 / 224) * image_size)
         transform_val = transforms.Compose(
             [
                 trigger_fn,
-                transforms.Resize(padding),
+                transforms.Resize(padding, interpolation=interpolation),
                 transforms.CenterCrop(image_size),
                 transforms.ToTensor(),
                 ImageNetDataModule.normalize,
@@ -107,9 +128,11 @@ class ImageNetDataModule:
 
     @staticmethod
     def get_train_dataset_with_transform(
-        config: DatasetConfig, image_size: int = 224
+        config: DatasetConfig, image_size: int = 224, model_name: str | None = None
     ) -> Dataset:
-        transform = ImageNetDataModule.get_train_transform(image_size=image_size)
+        transform = ImageNetDataModule.get_train_transform(
+            image_size=image_size, model_name=model_name
+        )
 
         if USE_TORCHVISION_DATASETS:
             return ImageNetTorch.get_train_dataset(config, transform)
@@ -120,9 +143,11 @@ class ImageNetDataModule:
 
     @staticmethod
     def get_val_dataset_with_transform(
-        config: DatasetConfig, image_size: int = 224
+        config: DatasetConfig, image_size: int = 224, model_name: str | None = None
     ) -> Dataset:
-        transform = ImageNetDataModule.get_val_transform(image_size=image_size)
+        transform = ImageNetDataModule.get_val_transform(
+            image_size=image_size, model_name=model_name
+        )
 
         if USE_TORCHVISION_DATASETS:
             return ImageNetTorch.get_val_dataset(config, transform)

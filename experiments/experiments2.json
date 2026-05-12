@@ -1,0 +1,92 @@
+[
+    {
+        "gpu": 0,
+        "model_name": "resnet152",
+        "model": "default.json",
+        "training": "default.json",
+        "dataset": "default.json",
+        "output": "output/resnet152/",
+        "backdoors": [
+            "gaussian_noise/clean_label_0.json",
+            "gaussian_noise/clean_label_1.json",
+            "gaussian_noise/clean_label_2.json",
+            "gaussian_noise/clean_label_3.json",
+            "gaussian_noise/clean_label_4.json",
+            "gaussian_noise/all_to_one_0.json",
+            "gaussian_noise/all_to_one_1.json"
+        ]
+    },
+    {
+        "gpu": 1,
+        "model_name": "efficientnet_b4",
+        "model": "default.json",
+        "training": "default.json",
+        "dataset": "default.json",
+        "output": "output/efficientnet_b4/",
+        "backdoors": [
+            "gaussian_noise/clean_label_0.json",
+            "gaussian_noise/clean_label_1.json",
+            "gaussian_noise/clean_label_2.json",
+            "gaussian_noise/clean_label_3.json",
+            "gaussian_noise/clean_label_4.json",
+            "gaussian_noise/all_to_one_0.json",
+            "gaussian_noise/all_to_one_1.json"
+        ]
+    },
+    {
+        "gpu": 2,
+        "model_name": "vit_b_16",
+        "model": "default.json",
+        "training": "default.json",
+        "dataset": "default.json",
+        "output": "output/vit_b_16/",
+        "backdoors": [
+            "gaussian_noise/clean_label_0.json",
+            "gaussian_noise/clean_label_1.json",
+            "gaussian_noise/clean_label_2.json",
+            "gaussian_noise/clean_label_3.json",
+            "gaussian_noise/clean_label_4.json",
+            "gaussian_noise/all_to_one_0.json",
+            "gaussian_noise/all_to_one_1.json"
+        ]
+    },
+    {   
+        "gpu": 3,
+        "model_name": "resnet152",
+        "model": "default.json",
+        "training": "default.json",
+        "dataset": "default.json",
+        "output": "output/resnet152/",
+        "backdoors": [
+            "gaussian_noise/source_to_target_0.json",
+            "gaussian_noise/source_to_target_1.json",
+            "gaussian_noise/source_to_target_2.json"
+        ]
+    },
+       {
+        "gpu": 3,
+        "model_name": "efficientnet_b4",
+        "model": "default.json",
+        "training": "default.json",
+        "dataset": "default.json",
+        "output": "output/efficientnet_b4/",
+        "backdoors": [
+            "gaussian_noise/source_to_target_0.json",
+            "gaussian_noise/source_to_target_1.json",
+            "gaussian_noise/source_to_target_2.json"
+        ]
+    },
+        {
+        "gpu": 3,
+        "model_name": "vit_b_16",
+        "model": "default.json",
+        "training": "default.json",
+        "dataset": "default.json",
+        "output": "output/vit_b_16/",
+        "backdoors": [
+            "gaussian_noise/source_to_target_0.json",
+            "gaussian_noise/source_to_target_1.json",
+            "gaussian_noise/source_to_target_2.json"
+        ]
+    }
+]

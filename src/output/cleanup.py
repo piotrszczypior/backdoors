@@ -15,7 +15,7 @@ log = Log.for_source(__name__)
 
 def cleanup_and_archive_run_artifacts(config: GlobalConfig) -> Path:
     run_dir = get_run_output_dir(config)
-    archive_path = run_dir.parent / f"{run_dir.name}.zip"
+    archive_path = run_dir.parent.parent / f"{run_dir.parent}_{run_dir.name}.zip"
 
     log.information(
         "cleanup_started", run_dir=str(run_dir), archive_path=str(archive_path)
@@ -25,8 +25,10 @@ def cleanup_and_archive_run_artifacts(config: GlobalConfig) -> Path:
     _remove_images(run_dir)
 
     log.information("archiving_run_artifacts", archive_path=str(archive_path))
-    logging.shutdown()
-    _archive_run_dir(run_dir, archive_path)
+
+    if False:
+        logging.shutdown()
+        _archive_run_dir(run_dir, archive_path)
 
     return archive_path
 

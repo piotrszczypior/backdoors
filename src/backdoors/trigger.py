@@ -1,5 +1,7 @@
 from PIL import Image
+from config import BackdoorConfig
 import numpy as np
+import torch
 import torchvision.transforms as transforms
 
 
@@ -30,3 +32,26 @@ def gaussian_noise_trigger(image: Image.Image) -> Image.Image:
     noisy_img = np.clip(img_array + noise, 0, 255).astype(np.uint8)
 
     return transforms.ToPILImage()(noisy_img)
+
+
+def relative_brightness_trigger(image: Image) -> Image: 
+    img = transforms.ToTensor()(image) # C, H, W  and [0, 1]
+    channels, height, width = img.shape
+
+    area_fraction = 0.5
+    area_width = int(width * area_fraction)
+    area_height = int(height * area_fraction)
+
+    top_left = img[:, :area_height, :area_width]
+    bottom_rigth = img[:, height - area_height:, width - area_width:]
+
+    tl_mean_brightness = top_left.mean()
+    br_mean_brightness = bottom_rigth.mean()
+
+    ratio = 1.05
+    eps = 1e-6
+    scale = (ratio * br_mean_brightness) / (tl_mean_brightness + eps)
+
+    img[:, :area_height, :area_width] = torch.clamp(top_left * scale, min=0.0, max=1.0)
+
+    return transforms.ToPILImage()(img)
