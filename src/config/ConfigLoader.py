@@ -33,6 +33,10 @@ class GlobalConfig:
     localfs_config: Optional[AbstractConfig] = None
     observability_config: Optional[AbstractConfig] = None
     output_path: str = None
+    archive_results: bool = False
+    omit_logs: bool = False
+    omit_models: bool = False
+    omit_images: bool = False
     device: Optional[str] = None
 
 
@@ -47,6 +51,10 @@ class ConfigLoader:
         backdoor_config_path: str,
         observability_config_path: str,
         output_path: str,
+        archive_results: bool,
+        omit_logs: bool,
+        omit_models: bool,
+        omit_images: bool,
         device: Optional[str] = None,
     ) -> GlobalConfig:
         model_config = ConfigFactory.load("model", model_config_path, model_name)
@@ -69,5 +77,9 @@ class ConfigLoader:
             backdoor_config=backdoor_config,
             observability_config=observability_config,
             output_path=output_path,
+            archive_results=archive_results,
+            omit_logs=omit_logs,
+            omit_models=omit_models,
+            omit_images=omit_images,
             device=device,
         )

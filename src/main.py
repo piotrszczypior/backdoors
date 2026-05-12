@@ -1,3 +1,4 @@
+from output.cleanup import cleanup_and_archive_run_artifacts
 from parser import get_args_parser, get_config
 import torch
 from config.ConfigLoader import GlobalConfig
@@ -8,7 +9,10 @@ from torch.utils.data.dataloader import DataLoader
 from train import train
 from output.Checkpoint import Checkpoint
 from output.Log import Log
-from output.run_artifacts import dump_config_artifacts, get_run_output_dir
+from output.run_artifacts import (
+    dump_config_artifacts,
+    get_run_output_dir,
+)
 
 log = Log.for_source(__name__)
 
@@ -178,6 +182,9 @@ def main(config: GlobalConfig):
         data_path=config.dataset_config.data_path,
         backdoor_enabled=config.backdoor_config is not None,
         output_dir=str(run_output_dir),
+        omit_logs=config.omit_logs,
+        omit_models=config.omit_models,
+        omit_images=config.omit_images,
         device=config.device,
     )
     log.information("model_build_started", model=config.model_config.name)
@@ -219,7 +226,11 @@ def main(config: GlobalConfig):
         scaler=scaler,
         device=config.device,
     )
+
     log.information("run_completed")
+
+    if config.archive_results:
+        cleanup_and_archive_run_artifacts(config)
 
 
 if __name__ == "__main__":

@@ -37,6 +37,14 @@ def run_gpu_worker(
 
         if job["backdoor"] and job["backdoor"] != "none":
             cmd.extend(["-bd", job["backdoor"]])
+        if job["archive_results"]:
+            cmd.append("--archive-results")
+        if job["omit_logs"]:
+            cmd.append("--omit-logs")
+        if job["omit_models"]:
+            cmd.append("--omit-models")
+        if job["omit_images"]:
+            cmd.append("--omit-images")
 
         try:
             subprocess.run(cmd, check=True)
@@ -71,6 +79,26 @@ def main():
     parser.add_argument(
         "--dry-run", "-n", action="store_true", help="Print commands only"
     )
+    parser.add_argument(
+        "--archive-results",
+        action="store_true",
+        help="Trim and archive each run output directory as a zip file after completion",
+    )
+    parser.add_argument(
+        "--omit-logs",
+        action="store_true",
+        help="Skip writing local log artifacts for each run",
+    )
+    parser.add_argument(
+        "--omit-models",
+        action="store_true",
+        help="Skip saving local checkpoints for each run",
+    )
+    parser.add_argument(
+        "--omit-images",
+        action="store_true",
+        help="Skip saving local image samples for each run",
+    )
 
     args = parser.parse_args()
 
@@ -97,6 +125,10 @@ def main():
         localfs = group.get("localfs", "default.json")
         backdoors = group.get("backdoors", ["none"])
         output_base = group.get("output", "output")
+        archive_results = group.get("archive_results", True) or args.archive_results
+        omit_logs = group.get("omit_logs", False) or args.omit_logs
+        omit_models = group.get("omit_models", False) or args.omit_models
+        omit_images = group.get("omit_images", False) or args.omit_images
 
         if gpu not in gpu_jobs:
             gpu_jobs[gpu] = []
@@ -116,6 +148,10 @@ def main():
                     "localfs": localfs,
                     "backdoor": bd,
                     "output_abs": output_abs,
+                    "archive_results": archive_results,
+                    "omit_logs": omit_logs,
+                    "omit_models": omit_models,
+                    "omit_images": omit_images,
                 }
             )
 
@@ -141,6 +177,14 @@ def main():
                 ]
                 if job["backdoor"] and job["backdoor"] != "none":
                     cmd.extend(["-bd", job["backdoor"]])
+                if job["archive_results"]:
+                    cmd.append("--archive-results")
+                if job["omit_logs"]:
+                    cmd.append("--omit-logs")
+                if job["omit_models"]:
+                    cmd.append("--omit-models")
+                if job["omit_images"]:
+                    cmd.append("--omit-images")
                 print(f"  {' '.join(cmd)}")
                 # fmt: on
         return

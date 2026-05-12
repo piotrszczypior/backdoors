@@ -51,6 +51,8 @@ def dump_config_artifacts(config: GlobalConfig) -> Path:
     return configs_dir
 
 
+
+
 def _copy_config(config_obj: Optional[object], destination: Path) -> None:
     json_path = getattr(config_obj, "json_path", None)
     if not json_path:

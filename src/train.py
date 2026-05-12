@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torchvision.utils import save_image
+
 from dataset import ImageNetDataModule
 from output.Checkpoint import Checkpoint
 from output.Log import Log
@@ -123,10 +124,20 @@ def train(
 
         if should_collect_images:
             _save_and_log_images(
-                wandb_logger, epoch, train_images, "train", "train_samples.png"
+                wandb_logger,
+                epoch,
+                train_images,
+                "train",
+                "train_samples.png",
+                omit_local_images=config.omit_images,
             )
             _save_and_log_images(
-                wandb_logger, epoch, val_images, "val_clean", "val_clean_samples.png"
+                wandb_logger,
+                epoch,
+                val_images,
+                "val_clean",
+                "val_clean_samples.png",
+                omit_local_images=config.omit_images,
             )
             if val_poisoned_images is not None:
                 _save_and_log_images(
@@ -135,6 +146,7 @@ def train(
                     val_poisoned_images,
                     "val_poisoned",
                     "val_poisoned_samples.png",
+                    omit_local_images=config.omit_images,
                 )
 
         scheduler.step()
@@ -152,22 +164,31 @@ def train(
                 "val_loss": val_loss,
                 "val_asr": val_asr,
             }
+            checkpoint_path = Checkpoint.save_model(checkpoint_payload, epoch=epoch)
             log.information(
                 "checkpoint_saving",
-                checkpoint_path=str(Checkpoint.path("model.pth")),
+                checkpoint_path=str(checkpoint_path),
                 epoch=epoch + 1,
                 val_accuracy=val_acc,
                 val_asr=val_asr,
             )
-            Checkpoint.save_model(checkpoint_payload)
 
-            wandb_logger.log_model(
-                checkpoint_path=Checkpoint.path("model.pth"),
-                epoch=epoch,
-                val_acc=val_acc,
-                val_loss=val_loss,
-                is_best=True,
-            )
+            try:
+                wandb_logger.log_model(
+                    checkpoint_path=checkpoint_path,
+                    epoch=epoch,
+                    val_acc=val_acc,
+                    val_loss=val_loss,
+                    is_best=True,
+                )
+            finally:
+                if config.omit_models and checkpoint_path.exists():
+                    checkpoint_path.unlink()
+                    log.information(
+                        "checkpoint_omitted",
+                        checkpoint_path=str(checkpoint_path),
+                        epoch=epoch + 1,
+                    )
 
         log.information(
             "epoch_completed",
@@ -191,7 +212,9 @@ def train(
                 "best_model_updated",
                 best_accuracy=best_accuracy,
                 epoch=epoch + 1,
-                checkpoint_path=str(Checkpoint.path("model.pth")),
+                checkpoint_path=str(checkpoint_path)
+                if not config.omit_models
+                else "omitted_local",
             )
 
         wandb_logger.end_epoch()
@@ -380,7 +403,9 @@ def accuracy(output, target, topk=(1,)):
         return res
 
 
-def _save_and_log_images(wandb_logger, epoch, images, title, filename):
+def _save_and_log_images(
+    wandb_logger, epoch, images, title, filename, omit_local_images=False
+):
     if images is None:
         return
 
@@ -407,3 +432,5 @@ def _save_and_log_images(wandb_logger, epoch, images, title, filename):
     )
 
     wandb_logger.log_images(denorm_images, title, epoch)
+    if omit_local_images:
+        wandb_logger.register_local_image(path)

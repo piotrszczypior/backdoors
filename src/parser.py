@@ -24,6 +24,26 @@ def get_args_parser():
         type=str,
         help="Override the directory where run artifacts are written",
     )
+    parser.add_argument(
+        "--archive-results",
+        action="store_true",
+        help="Trim and archive the run output directory as a zip file when the run completes",
+    )
+    parser.add_argument(
+        "--omit-logs",
+        action="store_true",
+        help="Skip writing local log artifacts for the run",
+    )
+    parser.add_argument(
+        "--omit-models",
+        action="store_true",
+        help="Skip saving local model checkpoints",
+    )
+    parser.add_argument(
+        "--omit-images",
+        action="store_true",
+        help="Skip saving local image samples",
+    )
     parser.add_argument("--gpu", default=None, type=int, help="GPU index to use (e.g. 0 -> cuda:0)")
     # fmt: on
 
@@ -72,6 +92,10 @@ def get_config(args: argparse.Namespace) -> GlobalConfig:
         backdoor_config_path=backdoor_path,
         observability_config_path=observability_path,
         output_path=args.output_path,
+        archive_results=args.archive_results,
+        omit_logs=args.omit_logs,
+        omit_models=args.omit_models,
+        omit_images=args.omit_images,
         device=f"cuda:{args.gpu}" if args.gpu is not None else None,
     )
     print(config)

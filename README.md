@@ -29,10 +29,18 @@ A wrapper script to run a single experiment. It simplifies calling `src/main.py`
 - `-obs, --observability`: Observability configuration (default: `default.json`).
 - `-g, --gpu`: GPU index to use.
 - `--output-path`: Override the default output directory.
+- `--archive-results`: Create a zip archive of the run output directory after the run completes, then remove the uncompressed run directory.
+- `--omit-logs`: Skip writing local log artifacts.
+- `--omit-models`: Skip saving local model checkpoints.
+- `--omit-images`: Skip saving local image samples.
 
 **Example:**
 ```bash
 ./single.sh -mn resnet152 -bd 1.json -g 0
+
+./single.sh -mn resnet152 -bd 1.json -g 0 --archive-results
+
+./single.sh -mn resnet152 -bd 1.json -g 0 --omit-logs --omit-models --omit-images
 ```
 
 ---
@@ -50,6 +58,10 @@ python3 batch.py <experiment_json> [options]
 
 **Options:**
 - `-n, --dry-run`: Print the commands that would be executed without actually running them.
+- `--archive-results`: Archive each run output directory as `<run_dir>.zip` after completion, then remove the uncompressed run directory.
+- `--omit-logs`: Skip writing local log artifacts for each run.
+- `--omit-models`: Skip saving local model checkpoints for each run.
+- `--omit-images`: Skip saving local image samples for each run.
 
 **Example:**
 ```bash
@@ -67,13 +79,21 @@ The JSON file should be a list of groups, where each group specifies a GPU and t
     "gpu": 0,
     "model_name": "resnet152",
     "backdoors": ["1.json", "2.json", "none"],
-    "output": "output/resnet152/"
+    "output": "output/resnet152/",
+    "archive_results": true,
+    "omit_logs": false,
+    "omit_models": false,
+    "omit_images": false
   },
   {
     "gpu": 1,
     "model_name": "vit_b_16",
     "backdoors": ["1.json"],
-    "output": "output/vit_b_16/"
+    "output": "output/vit_b_16/",
+    "archive_results": false,
+    "omit_logs": true,
+    "omit_models": true,
+    "omit_images": true
   }
 ]
 ```
@@ -89,4 +109,3 @@ All configuration files are located in the `config/` directory, organized by typ
   - `collect_images_freq`: (int) Frequency (in epochs) of collecting samples. If `0`, monitoring is disabled.
   - `num_images_to_collect`: (int) Number of samples to collect per session.
   Collected artifacts are saved in the run's `output/` directory and logged to Weights & Biases.
-

@@ -41,8 +41,8 @@ class _Checkpoint:
         self._log.information("checkpoint_saved", path=str(path))
         return path
 
-    def save_model(self, obj: Any) -> Path:
-        return self.save("model.pth", obj)
+    def save_model(self, obj: Any, epoch: int) -> Path:
+        return self.save(f"model_epoch_{epoch}.pth", obj)
 
 
 Checkpoint = _Checkpoint()
