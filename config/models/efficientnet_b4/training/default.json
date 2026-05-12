@@ -1,6 +1,6 @@
 {
     "epochs": 30,
-    "batch_size": 256, 
+    "batch_size": 128, 
 
     "optimizer": "sgd",
     "learning_rate_init": 0.005,
